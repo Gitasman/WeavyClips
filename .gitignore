@@ -1,0 +1,21 @@
+# Development dependencies and generated archives
+node_modules/
+coverage/
+dist/
+*.zip
+*.log
+
+# Local configuration and exported user data
+.env
+.env.*
+!.env.example
+weavy-clips-*-backup-*.json
+
+# Local editor and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Generated test output
+tests/RESULTS.txt

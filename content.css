@@ -1,0 +1,752 @@
+#wc-dock {
+  position: fixed;
+  z-index: 999999;
+  border-radius: var(--wc-radius, 9px);
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  background: var(--wc-bg, #1e1e26);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  align-items: center;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  color: #fff;
+  user-select: none;
+}
+
+#wc-drag-handle {
+  cursor: grab;
+  padding: 4px 6px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 16px;
+  line-height: 1;
+}
+
+#wc-drag-handle:active {
+  cursor: grabbing;
+}
+
+#wc-clips-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+#wc-dock button,
+#wc-dock [data-clip-id] {
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  max-width: 36px !important;
+  min-height: 36px !important;
+  font-size: 16px !important;
+  line-height: 1 !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.06);
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+#wc-dock button:hover,
+#wc-dock [data-clip-id]:hover {
+  background: rgba(255,255,255,0.13);
+  transform: scale(1.08);
+}
+/* Save button gets accent color */
+#wc-save-btn { background: var(--wc-accent) !important; color: #1a1a22 !important; }
+#wc-save-btn:hover { filter: brightness(1.15); transform: scale(1.08); }
+
+.wc-clip-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+  position: relative;
+  white-space: nowrap;
+}
+
+.wc-clip-btn:hover {
+  background: var(--wc-accent, #faffc7);
+  border-color: var(--wc-accent, #faffc7);
+  transform: translateY(-1px);
+}
+
+.wc-clip-icon {
+  font-size: 14px;
+}
+
+.wc-clip-name {
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#wc-save-btn,
+#wc-library-btn,
+#wc-settings-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #fff;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+#wc-save-btn:hover,
+#wc-library-btn:hover,
+#wc-settings-btn:hover {
+  background: var(--wc-accent, #faffc7);
+  border-color: var(--wc-accent, #faffc7);
+}
+
+#wc-save-btn:active,
+#wc-library-btn:active,
+#wc-settings-btn:active,
+.wc-clip-btn:active {
+  transform: scale(0.95);
+}
+
+.wc-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 8px;
+  background: #2a2a35;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 1000000;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.wc-tooltip.visible {
+  opacity: 1;
+}
+
+.wc-tooltip-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.wc-tooltip-name {
+  font-weight: 600;
+  color: #fff;
+}
+
+.wc-tooltip-date {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
+}
+
+.wc-tooltip-preview {
+  color: rgba(255, 255, 255, 0.7);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.wc-toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--wc-accent, #faffc7);
+  color: #212126;
+  font-weight: 500;
+  padding: 10px 20px;
+  border-radius: calc(var(--wc-radius, 9px) + 4px);
+  font-size: 14px;
+  z-index: 1000001;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+
+.wc-toast.visible {
+  opacity: 1;
+}
+
+.wc-context-menu {
+  position: fixed;
+  background: #2a2a35;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 4px 0;
+  z-index: 1000002;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  min-width: 140px;
+}
+
+.wc-context-item {
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #fff;
+  transition: background 0.15s ease;
+}
+
+.wc-context-item:hover {
+  background: var(--wc-accent, #faffc7);
+}
+
+.wc-context-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 4px 0;
+}
+
+.wc-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 1000003;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wc-modal {
+  background: #2a2a35;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 16px 64px rgba(0, 0, 0, 0.5);
+}
+
+.wc-modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.wc-modal-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.wc-modal-close {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.wc-modal-close:hover {
+  color: #fff;
+}
+
+.wc-modal-content {
+  padding: 16px 20px;
+  overflow-y: auto;
+  max-height: 60vh;
+}
+
+.wc-library-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.wc-library-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.wc-library-icon {
+  font-size: 20px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+}
+
+.wc-library-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.wc-library-name {
+  font-weight: 500;
+  color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wc-library-meta {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.wc-library-preview {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wc-library-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.wc-library-action {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 6px;
+  padding: 6px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #fff;
+  transition: background 0.15s ease;
+}
+
+.wc-library-action:hover {
+  background: var(--wc-accent, #faffc7);
+}
+
+.wc-empty-state {
+  text-align: center;
+  padding: 40px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.wc-rename-input {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 4px 8px;
+  color: #fff;
+  font-size: 13px;
+  outline: none;
+}
+
+.wc-rename-input:focus {
+  border-color: var(--wc-accent, #faffc7);
+}
+
+/* Dynamic pinned clips: no fixed slot cap. The dock grows horizontally as clips are pinned. */
+#wc-dock {
+  width: max-content;
+  max-width: none;
+  flex-wrap: nowrap;
+}
+
+#wc-clips-row {
+  flex-wrap: nowrap;
+  width: max-content;
+}
+
+/* Clip version history */
+.wc-history-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000004;
+  background: rgba(0, 0, 0, 0.62);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.wc-history-modal {
+  width: min(620px, calc(100vw - 32px));
+  max-height: min(680px, calc(100vh - 48px));
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--wc-bg, #212126);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: calc(var(--wc-radius, 9px) + 4px);
+  box-shadow: 0 18px 64px rgba(0,0,0,0.55);
+}
+
+.wc-history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.wc-history-title { font-weight: 600; font-size: 15px; }
+.wc-history-subtitle { color: rgba(255,255,255,0.45); font-size: 11px; margin-top: 2px; }
+.wc-history-close {
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,0.55);
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.wc-history-current {
+  margin: 12px 14px 4px;
+  padding: 12px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 9px;
+  font-size: 12px;
+}
+
+.wc-history-list {
+  overflow-y: auto;
+  padding: 10px 14px 14px;
+}
+
+.wc-history-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  margin-bottom: 7px;
+  background: rgba(255,255,255,0.045);
+  border-radius: 8px;
+}
+
+.wc-history-info { flex: 1; min-width: 0; font-size: 12px; }
+.wc-history-preview {
+  margin-top: 4px;
+  color: rgba(255,255,255,0.5);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wc-history-empty { padding: 24px 10px; text-align: center; color: rgba(255,255,255,0.45); font-size: 12px; }
+.wc-history-restore {
+  flex-shrink: 0;
+  border: none;
+  border-radius: 7px;
+  padding: 7px 10px;
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  cursor: pointer;
+}
+.wc-history-restore:hover { background: var(--wc-accent, #faffc7); color: #212126; }
+
+
+/* v1.9: Library title + metadata share the top row; content/actions sit below. */
+#wc-library-panel .wc-lib-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 11px 10px;
+  margin-bottom: 8px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 10px;
+  cursor: grab;
+  transition: background 0.15s ease;
+}
+
+#wc-library-panel .wc-lib-item:hover {
+  background: rgba(255,255,255,0.085);
+}
+
+#wc-library-panel .wc-lib-top-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  padding: 0 2px;
+}
+
+#wc-library-panel .wc-lib-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: text;
+  padding: 2px 4px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+#wc-library-panel .wc-lib-name:hover {
+  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,0.10);
+}
+
+#wc-library-panel .wc-lib-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+  max-width: 58%;
+  color: rgba(255,255,255,0.44);
+  font-size: 10px;
+  line-height: 1.25;
+  text-align: right;
+  white-space: nowrap;
+}
+
+#wc-library-panel .wc-lib-type {
+  flex-shrink: 0;
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: #212126;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+#wc-library-panel .wc-lib-content-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+#wc-library-panel .wc-lib-icon-btn {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  max-width: 38px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.10);
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+#wc-library-panel .wc-lib-preview {
+  flex: 1;
+  min-width: 0;
+  max-width: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(255,255,255,0.42);
+  font-size: 10px;
+}
+
+#wc-library-panel .wc-lib-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+#wc-library-panel .wc-lib-action {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: none;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.10);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+#wc-library-panel .wc-lib-action:hover {
+  background: var(--wc-accent, #faffc7);
+  color: #212126;
+  transform: translateY(-1px);
+}
+
+#wc-library-panel .wc-lib-delete {
+  color: #ef7777;
+}
+
+/* Shared dock/Library drag-and-drop ordering. */
+#wc-dock .wc-clip-btn {
+  cursor: grab;
+}
+
+#wc-dock .wc-clip-btn:active,
+#wc-library-panel .wc-lib-item:active {
+  cursor: grabbing;
+}
+
+.wc-clip-btn.wc-dragging,
+#wc-library-panel .wc-lib-item.wc-dragging {
+  opacity: 0.38;
+}
+
+#wc-dock .wc-clip-btn.wc-drop-before {
+  box-shadow: inset 3px 0 0 var(--wc-accent, #faffc7);
+}
+
+#wc-dock .wc-clip-btn.wc-drop-after {
+  box-shadow: inset -3px 0 0 var(--wc-accent, #faffc7);
+}
+
+#wc-library-panel .wc-lib-item.wc-drop-before {
+  box-shadow: inset 0 3px 0 var(--wc-accent, #faffc7);
+}
+
+#wc-library-panel .wc-lib-item.wc-drop-after {
+  box-shadow: inset 0 -3px 0 var(--wc-accent, #faffc7);
+}
+
+/* Keep context menu inside the viewport and make the expanded action set readable. */
+.wc-context-menu {
+  min-width: 180px;
+  max-width: min(240px, calc(100vw - 16px));
+}
+
+.wc-context-item {
+  white-space: nowrap;
+}
+
+.wc-context-item:hover {
+  color: #212126;
+}
+
+.wc-context-danger {
+  color: #ef7777;
+}
+
+/* v2 appearance + behavior overrides */
+#wc-dock button,
+#wc-dock [data-clip-id] {
+  width: var(--wc-btn-size, 36px) !important;
+  height: var(--wc-btn-size, 36px) !important;
+  min-width: var(--wc-btn-size, 36px) !important;
+  max-width: var(--wc-btn-size, 36px) !important;
+  min-height: var(--wc-btn-size, 36px) !important;
+}
+#wc-dock[data-overflow-mode="scroll"] #wc-clips-row {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+.wc-lib-search { width:100%; margin:0 0 10px; padding:8px 10px; border-radius:8px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.06); color:#fff; outline:none; }
+.wc-lib-group { font-size:10px; color:rgba(255,255,255,.45); text-transform:uppercase; letter-spacing:.06em; margin:10px 4px 5px; }
+.wc-lib-lock { opacity:.75; }
+.wc-tooltip-meta2 { color:rgba(255,255,255,.55); font-size:11px; margin-top:5px; }
+.wc-drag-guide { position:fixed; z-index:999997; pointer-events:none; background:var(--wc-accent,#faffc7); opacity:.45; }
+#wc-clips-row .wc-group-divider{width:1px;height:24px;background:rgba(255,255,255,.16);margin:0 3px;flex:0 0 1px}.wc-clip-btn.wc-locked:after{content:'•';position:absolute;right:3px;top:1px;font-size:8px;color:var(--wc-accent,#faffc7)}
+
+
+/* Library header controls */
+#wc-library-panel .wc-lib-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,.1);
+}
+#wc-library-panel .wc-lib-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+#wc-library-panel .wc-lib-header-btn {
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 6px;
+  background: rgba(255,255,255,.07);
+  color: rgba(255,255,255,.58);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease, transform .15s ease;
+}
+#wc-library-panel .wc-lib-header-btn:hover {
+  background: rgba(255,255,255,.13);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+/* Foreground follows the inherited background in Library and history. */
+#wc-library-panel{color:var(--wc-on-bg,#fff)!important}
+#wc-library-panel :is(.wc-lib-name,.wc-lib-header,.wc-lib-header-btn,.wc-lib-search),
+.wc-history-modal,.wc-history-title{color:var(--wc-on-bg,#fff)}
+#wc-library-panel :is(.wc-lib-group,.wc-lib-meta-row,.wc-lib-preview),
+.wc-history-subtitle,.wc-history-preview,.wc-history-close{color:color-mix(in srgb,var(--wc-on-bg,#fff) 65%,transparent)}
+#wc-library-panel .wc-lib-search{border-color:color-mix(in srgb,var(--wc-on-bg,#fff) 20%,transparent)}
+/* Room to drag around controls; fixed-size emoji boxes ignore host line metrics. */
+#wc-dock{cursor:grab}
+#wc-dock:active{cursor:grabbing}
+#wc-dock button{cursor:pointer}
+#wc-dock .wc-clip-btn{cursor:grab}
+#wc-library-panel .wc-glyph{display:block;line-height:1;transform:translateY(-1px);pointer-events:none;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",system-ui}
+#wc-library-panel{box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden!important;max-height:min(560px,calc(100vh - 32px))!important;animation:wc-panel-enter .15s ease-out}
+#wc-lib-list{height:min(410px,calc(100vh - 140px));min-height:90px;overflow:auto}
+#wc-library-panel .wc-lib-content-row{flex-wrap:wrap}
+#wc-library-panel .wc-lib-actions{width:100%;justify-content:flex-end}
+#wc-library-panel .wc-lib-item{gap:4px;padding:9px 10px}
+#wc-library-panel .wc-lib-preview{white-space:nowrap}
+#wc-library-panel .wc-lib-meta-row{max-width:45%}
+#wc-dock[data-auto-hide=true]{transition:clip-path .16s ease}
+#wc-dock[data-auto-hide=true].wc-idle{clip-path:inset(0 calc(100% - 34px) 0 0 round var(--wc-radius))}
+#wc-dock[data-auto-hide=true].wc-idle button,#wc-dock[data-auto-hide=true].wc-idle #wc-clips-row{visibility:hidden}
+@media(prefers-reduced-motion:reduce){#wc-library-panel{animation:none}#wc-dock[data-auto-hide=true]{transition:none}}

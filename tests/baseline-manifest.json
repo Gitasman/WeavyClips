@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "Weavy Clips",
+  "version": "2.0.3",
+  "description": "Clipboard and reusable clip manager for Weavy",
+  "permissions": [
+    "clipboardRead",
+    "clipboardWrite",
+    "storage",
+    "unlimitedStorage",
+    "tabs",
+    "debugger"
+  ],
+  "host_permissions": [
+    "*://app.weavy.ai/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://app.weavy.ai/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "run_at": "document_end"
+    }
+  ],
+  "options_page": "options.html",
+  "action": {
+    "default_title": "Weavy Clips"
+  }
+}

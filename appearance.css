@@ -1,0 +1,56 @@
+/* Shared dock and preview styling. Only interaction properties animate. */
+:is(#wc-dock, #dock-preview-box) {
+  box-sizing: border-box;
+  display: inline-flex; align-items: center; gap: 4px; padding: 8px 12px;
+  background: var(--wc-surface, #212126);
+  color: var(--wc-on-bg, #fff);
+  border: var(--wc-border-width, 1px) solid var(--wc-border-color, rgba(255,255,255,.14));
+  border-radius: var(--wc-radius, 9px);
+  opacity: 1;
+  backdrop-filter: var(--wc-blur, none);
+  -webkit-backdrop-filter: var(--wc-blur, none);
+  box-shadow: var(--wc-shadow, none);
+}
+:is(#wc-dock, #dock-preview-box) :is(button, [data-clip-id]) {
+  box-sizing: border-box;
+  width: var(--wc-btn-size, 36px) !important; height: var(--wc-btn-size, 36px) !important;
+  min-width: var(--wc-btn-size, 36px) !important; max-width: var(--wc-btn-size, 36px) !important;
+  min-height: var(--wc-btn-size, 36px) !important;
+  display: inline-flex; justify-content: center; align-items: center; flex-shrink: 0;
+  padding: 0; font: 16px/1 system-ui; cursor: pointer;
+  box-shadow: none;
+  border: 0; border-radius: var(--wc-button-radius, 8px);
+  background: color-mix(in srgb, var(--wc-on-bg, #fff) 7%, transparent);
+  color: var(--wc-on-bg, #fff);
+  transition: background-color .14s ease, transform .14s ease;
+}
+:is(#wc-dock, #dock-preview-box) button:hover {
+  background: color-mix(in srgb, var(--wc-on-bg, #fff) 15%, transparent);
+  transform: translateY(-1px);
+}
+:is(#wc-dock, #dock-preview-box) button:active {transform: scale(.95)}
+:is(#wc-dock, #dock-preview-box) button:focus-visible {
+  outline: 2px solid var(--wc-accent); outline-offset: 2px;
+}
+:is(#wc-dock, #dock-preview-box) [data-wc-role="save"] {
+  background: var(--wc-accent) !important; color: var(--wc-on-accent) !important; filter: none;
+}
+:is(#wc-dock, #dock-preview-box)[data-accent-mode="minimal"] [data-wc-role="save"] {
+  background: transparent !important; color: var(--wc-accent) !important;
+  box-shadow: inset 0 0 0 1px var(--wc-accent);
+}
+:is(#wc-dock, #dock-preview-box)[data-accent-mode="strong"] button:not([data-wc-role="save"]) {
+  background: rgba(var(--wc-accent-rgb), .2);
+}
+:is(#wc-dock, #dock-preview-box)[data-accent-mode="strong"] button:hover {
+  background: var(--wc-accent) !important; color: var(--wc-on-accent) !important;
+}
+:is(#wc-dock, #dock-preview-box) svg {width:18px;height:18px;pointer-events:none}
+#wc-drag-handle {color:inherit;opacity:.55}
+@media (prefers-reduced-motion: reduce) {
+  :is(#wc-dock, #dock-preview-box) button {transition:none!important}
+  :is(#wc-dock, #dock-preview-box) button:hover {transform:none}
+}
+
+/* Emoji glyphs are optically centered separately from the button hit target. */
+:is(#wc-dock, #dock-preview-box) .wc-glyph {display:block;line-height:1;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",system-ui;transform:translateY(-1px);pointer-events:none}

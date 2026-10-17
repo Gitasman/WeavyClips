@@ -1,0 +1,12 @@
+{
+  "name": "weavy-clips",
+  "version": "2.2.1",
+  "private": true,
+  "description": "Test tooling only; Chrome loads the extension without a build step.",
+  "scripts": {
+    "test": "node tests/regression.cjs && node tests/dom-integration.cjs"
+  },
+  "devDependencies": {
+    "linkedom": "0.18.13"
+  }
+}

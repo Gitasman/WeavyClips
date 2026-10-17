@@ -1,0 +1,19 @@
+.wc-virtual-list{overflow:auto;overflow-anchor:none;overscroll-behavior:contain}
+.wc-virtual-row{box-sizing:border-box;overflow:hidden;padding-bottom:8px}
+.wc-virtual-row>.clip-item,.wc-virtual-row>.wc-lib-item{box-sizing:border-box;height:100%;margin-bottom:0!important;overflow:hidden}
+.wc-image-thumbnail{display:block;width:52px;height:38px;object-fit:cover;border-radius:5px;background:rgba(128,128,128,.12)}
+#wc-command-palette{box-sizing:border-box;width:min(540px,calc(100vw - 24px));max-height:75vh;position:fixed;inset:12vh auto auto 50%;margin:0;transform:translateX(-50%);padding:14px;border:1px solid #ffffff2b;border-radius:16px;background:var(--panel-bg,var(--wc-bg,#1e1e1e));color:var(--panel-fg,var(--wc-on-bg,#fff));box-shadow:0 22px 80px #0008;font:14px/1.4 system-ui}
+#wc-command-palette::backdrop{background:#0006;backdrop-filter:blur(3px)}
+#wc-command-palette .wc-palette-head{display:flex;gap:8px;margin-bottom:10px}
+#wc-command-palette input{flex:1;min-width:0;background:#8882;border:1px solid #8885;border-radius:9px;padding:10px;color:inherit;font:inherit}
+#wc-command-palette button{font:inherit;color:inherit;border:0;border-radius:8px;cursor:pointer;background:transparent}
+#wc-command-palette .wc-palette-results{max-height:50vh;overflow:auto}
+#wc-command-palette .wc-palette-results button{display:flex;gap:12px;align-items:center;width:100%;padding:10px;text-align:left}
+#wc-command-palette .wc-palette-results button[aria-selected=true],#wc-command-palette .wc-palette-results button:hover{background:#8883}
+#wc-command-palette .wc-palette-results button>span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#wc-command-palette small{display:block;opacity:.6;font-size:11px}
+#wc-command-palette .wc-palette-help{font-size:11px;opacity:.55;margin-top:10px}
+#wc-command-palette :focus-visible{outline:2px solid var(--ui-accent,var(--wc-accent,#fff));outline-offset:2px}
+#wc-command-palette[open]{animation:wc-panel-enter .14s ease-out}
+@keyframes wc-panel-enter{from{opacity:0;translate:0 5px}to{opacity:1;translate:0 0}}
+@media(prefers-reduced-motion:reduce){#wc-command-palette[open]{animation:none}}
