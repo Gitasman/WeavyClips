@@ -1,19 +1,6 @@
 console.log('[WeavyClips] Options v2 loaded');
 
-const DEFAULT_SETTINGS = {
-  accentColor: '#faffc7', bgColor: '#212126', borderRadius: 9,
-  dockButtonSize: 36, dockOpacity: 100, dockBlur: 0, dockShadow: 32, accentMode: 'normal',
-  pasteMethod: 'datatransfer', captureSelectionBeforeSave: true, captureSelectionMethod: 'synthetic_ctrlc',
-  verifySelectionCopy: true, smartAllowDebugger: false, duplicateBehavior: 'warn', maxVersions: 25,
-  restoreClipboardAfterDebuggerPaste: false, quickPasteEnabled: false,
-  settingsSchemaVersion: 8,
-  defaultDockHorizontalAnchor: 'center', defaultDockHorizontalOffset: 140,
-  defaultDockVerticalAnchor: 'bottom', defaultDockVerticalOffset: 11,
-  dockLeft: 'calc(50% + 140px)', dockRight: 'auto', dockTop: 'auto', dockBottom: '11px',
-  dockOverflowMode: 'unlimited', dockMaxWidth: 900, clampDock: true, snapDock: false,
-  perProjectPosition: true, showDragGuides: true, showDeleteConfirm: false, siteMode: 'weavy_only',
-  ...WeavyAppearance.defaults, dockAutoHide: false
-};
+const DEFAULT_SETTINGS = WeavyDefaults.settings;
 
 let state = { clips: [], settings: { ...DEFAULT_SETTINGS }, search: '', filter: 'all' };
 const clipStore=new WeavyClips.Client({get:()=>state.clips,set:clips=>{state.clips=clips;scheduleClipsRender()},status:(status)=>{
@@ -170,8 +157,8 @@ function clipRowMarkup(c){return `<div class="clip-item ${c.locked?'locked':''}"
       <div class="clip-extra"><input data-group-for="${esc(c.id)}" value="${esc(c.group||'')}" placeholder="Group"></div>
     </div>
     <div class="clip-actions">
-      <button class="btn-icon ${c.pinned?'active':''}" data-action="pin" data-id="${esc(c.id)}" title="${c.pinned?'Unpin':'Pin'}">${c.pinned?'📌':'📍'}</button>
-      <button class="btn-icon ${c.locked?'active':''}" data-action="lock" data-id="${esc(c.id)}" title="${c.locked?'Unlock':'Lock'}">${c.locked?'🔒':'🔓'}</button>
+      <button class="btn-icon ${c.pinned?'active':''}" data-action="pin" data-id="${esc(c.id)}" title="${c.pinned?'Unpin · hide from dock':'Pin · show on dock'}">${c.pinned?'📌':'📍'}</button>
+      <button class="btn-icon ${c.locked?'active':''}" data-action="lock" data-id="${esc(c.id)}" title="${c.locked?'Unlock · allow updates and deletion':'Lock · protect content and deletion'}">${c.locked?'🔒':'🔓'}</button>
       <button class="btn-icon" data-action="copy" data-id="${esc(c.id)}" title="Copy">📋</button>
       <button class="btn-icon" data-action="update" data-id="${esc(c.id)}" title="Update">🔄</button>
       <button class="btn-icon" data-action="history" data-id="${esc(c.id)}" title="Version history">🕘</button>
@@ -284,6 +271,7 @@ window.addEventListener('scroll',updatePreviewAlignment,{passive:true});
 window.addEventListener('resize',updatePreviewAlignment);
 
 function renderSettings(){
+  document.getElementById('settings-open-mode').value=state.settings.settingsOpenMode;
   const s=state.settings;
   const set=(id,v)=>{const e=document.getElementById(id);if(e)e.value=v}; const check=(id,v)=>{const e=document.getElementById(id);if(e)e.checked=!!v};
   set('accent-color',s.accentColor);document.getElementById('accent-color-value').textContent=s.accentColor;set('bg-color',s.bgColor);document.getElementById('bg-color-value').textContent=s.bgColor;
@@ -355,6 +343,8 @@ function attachListeners(){
   document.getElementById('preset-update').onclick=()=>persistPreset('update');
   document.getElementById('preset-delete').onclick=()=>persistPreset('delete');
   document.getElementById('quick-find-btn').onclick=openQuickFind;
+  bindSetting('settings-open-mode','settingsOpenMode');
+  document.getElementById('apply-defaults-btn').onclick=applyBundledDefaults;
   document.getElementById('retry-clips-btn').onclick=()=>clipStore.flush();
   document.querySelectorAll('[data-filter]').forEach(button=>button.onclick=()=>{
     state.filter=button.dataset.filter;
@@ -422,21 +412,15 @@ async function useCurrentAsDefault(){try{const g=await messageWeavy({action:'get
 function messageWeavy(message){return new Promise((resolve,reject)=>chrome.tabs.query({url:'*://app.weavy.ai/*',currentWindow:true},tabs=>{const tab=tabs.find(t=>t.active)||tabs[0];if(!tab){reject(new Error('No Weavy tab'));return;}chrome.tabs.sendMessage(tab.id,message,r=>{if(chrome.runtime.lastError||!r){reject(new Error(chrome.runtime.lastError?.message||'No response'));return;}resolve(r)})}))}
 
 
-async function handleImport(e){
-  const f=e.target.files[0];e.target.value='';if(!f)return;
-  if(f.size>64*1024*1024){alert('Import failed: backups must be 64 MB or smaller');return;}
-  try{
-    const d=WeavyClips.validateBackup(JSON.parse(await f.text()));
-    const ids=new Set(state.clips.map(c=>c.id)),incoming=d.clips.filter(c=>!ids.has(c.id));
-    let n=state.clips.length;incoming.forEach(c=>c.sortOrder=n++);
-    state.clips.push(...incoming);normalizeClips();
-    if(!await saveClips(true))throw Error('Clips could not be saved. Use Retry clip save.');
-    if(d.settings){const known=Object.fromEntries(Object.keys(DEFAULT_SETTINGS).filter(k=>Object.hasOwn(d.settings,k)).map(k=>[k,d.settings[k]]));state.settings=normalizeSettings({...state.settings,...known,settingsSchemaVersion:8});saveSettings();}
-    if(d.appearancePresets){const result=await chrome.runtime.sendMessage({action:'presetMutation',operation:'import',presets:d.appearancePresets});if(!result?.success)throw Error('Clips imported, but presets could not be saved');}
-    renderUI();notify(`Imported ${incoming.length} clips · ${d.clips.length-incoming.length} already present`);
-  }catch(error){renderClipsList();alert('Import failed: '+error.message);}
+async function handleImport(e){const file=e.target.files[0];e.target.value='';return WeavyBackup.importFile(file,{before:()=>clipStore.flush(),report:notify});}
+function handleExport(){return WeavyBackup.exportFile({before:()=>clipStore.flush(),report:notify});}
+async function applyBundledDefaults(){
+  if(!confirm('Apply bundled settings and add missing starter clips? Existing clips will be kept.'))return;
+  if(!await clipStore.flush())return;
+  const result=await chrome.runtime.sendMessage({action:'applyFactoryDefaults'});
+  notify(result?.success?`Defaults applied · ${result.added} starter clips added`:'Could not apply defaults: '+(result?.error||'Unknown error'));
 }
-function handleExport(){const blob=new Blob([JSON.stringify({schemaVersion:3,clips:state.clips,settings:state.settings,appearancePresets:customPresets,exportedAt:Date.now()},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`weavy-clips-v2-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);notify('Backup exported')}
+
 function handleClear(){if(!confirm('Delete ALL clips? Export a backup first if needed.'))return;if(state.settings.showDeleteConfirm&&!confirm('Really delete all clips?'))return;state.clips=[];saveClips(true);renderClipsList();notify('All clips cleared')}
 
 async function refreshDiagnostics(){const root=document.getElementById('diagnostics');if(!root)return;const versions=state.clips.reduce((n,c)=>n+(c.versions?.length||0),0),locked=state.clips.filter(c=>c.locked).length,pinned=state.clips.filter(c=>c.pinned).length;const bytes=await new Promise(r=>chrome.storage.local.getBytesInUse(null,n=>r(n||0)));let runtime=null;try{runtime=await messageWeavy({action:'getRuntimeDiagnostics'})}catch{}const capture=runtime?.capture;const captureText=capture?`${capture.ok?'OK':'Failed'} · ${capture.method}${capture.verified?' · verified':''}${capture.copyEventSeen?' · copy event':''}`:'No runtime capture yet';const nativeTypes=capture?.nativeTypes?.length?capture.nativeTypes.join(', '):'—';const data=[['Version',chrome.runtime.getManifest().version],['Clips',String(state.clips.length)],['Pinned',String(pinned)],['Locked',String(locked)],['Stored versions',String(versions)],['Storage',formatBytes(bytes)],['Save method',state.settings.captureSelectionMethod],['Last selection copy',captureText],['Native copy types',nativeTypes],['Paste method',state.settings.pasteMethod],['Dock default',`${state.settings.defaultDockHorizontalAnchor} ${state.settings.defaultDockHorizontalOffset}px / ${state.settings.defaultDockVerticalAnchor} ${state.settings.defaultDockVerticalOffset}px`],['Current Weavy path',runtime?.projectKey||'—'],['Schema',String(state.settings.settingsSchemaVersion)]];root.innerHTML=data.map(([k,v])=>`<div class="diag-row"><span>${esc(k)}</span><code>${esc(v)}</code></div>`).join('');}
@@ -444,7 +428,7 @@ function formatBytes(n){if(n<1024)return n+' B';if(n<1048576)return (n/1024).toF
 async function copyDiagnostics(){await refreshDiagnostics();const text=[...document.querySelectorAll('.diag-row')].map(r=>`${r.children[0].textContent}: ${r.children[1].textContent}`).join('\n');await navigator.clipboard.writeText(text);notify('Diagnostics copied')}
 function notify(message,undo){document.querySelector('.toast')?.remove();const t=document.createElement('div');t.className='toast';t.setAttribute('role','status');const text=document.createElement('span');text.textContent=message;t.appendChild(text);if(undo){const button=document.createElement('button');button.textContent='Undo';button.onclick=()=>{undo();t.remove()};t.appendChild(button)}document.body.appendChild(t);setTimeout(()=>t.remove(),undo?6000:2200)}
 function renderUI(){renderClipsList();renderSettings()}
-function init(){chrome.storage.local.get(['clips','clipsRevision','settings','appearancePresets','collapsedSections'],r=>{state.clips=r.clips||[];clipStore.reset(state.clips,r.clipsRevision);customPresets=WeavyAppearance.sanitizePresets(r.appearancePresets);state.settings=normalizeSettings(r.settings||{});settingsSnapshot={...state.settings};document.querySelectorAll('[data-version]').forEach(el=>el.textContent='v'+chrome.runtime.getManifest().version);normalizeClips();renderUI();attachListeners();initNavigation(r.collapsedSections||{});updatePreviewAlignment()})}
+async function init(){await chrome.runtime.sendMessage({action:'initializeDefaults'});chrome.storage.local.get(['clips','clipsRevision','settings','appearancePresets','collapsedSections'],r=>{state.clips=r.clips||[];clipStore.reset(state.clips,r.clipsRevision);customPresets=WeavyAppearance.sanitizePresets(r.appearancePresets);state.settings=normalizeSettings(r.settings||{});settingsSnapshot={...state.settings};document.querySelectorAll('[data-version]').forEach(el=>el.textContent='v'+chrome.runtime.getManifest().version);normalizeClips();renderUI();attachListeners();initNavigation(r.collapsedSections||{});updatePreviewAlignment()})}
 chrome.storage.onChanged.addListener((ch,area)=>{
   if(area !== 'local') return;
   if(ch.appearancePresets){customPresets=WeavyAppearance.sanitizePresets(ch.appearancePresets.newValue);renderPresets()}

@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.4.0 — 2026-10-17
+
+- Apply the current factory appearance and centralize shared default settings.
+- Seed optional bundled starter clips once on fresh installation while preserving existing libraries.
+- Default settings to a full browser tab with an explicit native-side-panel preference.
+- Move Backup first and add a Library header import/export popover.
+- Share validated, serialized backup import/export between settings and Library.
+- Reduce clip tooltips to the name and updated date, and keep them inside the viewport.
+- Theme context menus with dock tokens, remove Lock/Pin from that menu and add keyboard navigation.
+- Preserve Lock and Pin controls in Library and Clips Manager.
+- Fix Escape/blur cancellation when renaming from the context menu.
+
 ## 2.3.0 — 2026-10-17
 
 - Serialize clip writes in the service worker and merge additions/field edits across extension pages and Weavy tabs.

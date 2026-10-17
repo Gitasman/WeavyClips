@@ -1,9 +1,10 @@
 console.log('[WeavyClips] Background service worker started');
 
 importScripts('appearance.js');
+importScripts('factory.js');
 importScripts('clips.js');
 // Native side panel is the default UI; no extra tab/window on toolbar click.
-chrome.sidePanel.setPanelBehavior({openPanelOnActionClick:true}).catch(console.error);
+// Toolbar behavior follows the saved opening preference.
 
 function sendDebuggerCommand(tabId, method, params = {}) {
   return new Promise((resolve, reject) => {
@@ -172,10 +173,9 @@ async function applyDefaultDockToOpenWeavyTabs() {
   return { success: true, tabs: tabs.length, immediate };
 }
 
-let settingsWriteQueue = Promise.resolve();
-let clipsWriteQueue = Promise.resolve();
+let storageWriteQueue = Promise.resolve();
 function patchClips(operations) {
-  const write=clipsWriteQueue.then(async()=>{
+  const write=storageWriteQueue.then(async()=>{
     if(!Array.isArray(operations)||operations.length>100000)throw new Error('Invalid clip operations');
     const stored=await chrome.storage.local.get(['clips','clipsRevision']);
     const clips=WeavyClips.apply(stored.clips||[],operations);
@@ -183,22 +183,23 @@ function patchClips(operations) {
     await chrome.storage.local.set({clips,clipsRevision:revision});
     return revision;
   });
-  clipsWriteQueue=write.catch(()=>{});
+  storageWriteQueue=write.catch(()=>{});
   return write;
 }
 function patchSettings(patch) {
-  const write = settingsWriteQueue.then(async () => {
+  const write = storageWriteQueue.then(async () => {
     const stored = await chrome.storage.local.get('settings');
     const revision = (Number(stored.settings?._revision) || 0) + 1;
     await chrome.storage.local.set({settings:{...(stored.settings || {}), ...patch, _revision:revision}});
+    if(Object.hasOwn(patch,'settingsOpenMode'))await configureOptions(patch.settingsOpenMode);
     return revision;
   });
-  settingsWriteQueue = write.catch(() => {});
+  storageWriteQueue = write.catch(() => {});
   return write;
 }
 
 function mutatePreset(message) {
-  const write = settingsWriteQueue.then(async()=>{
+  const write = storageWriteQueue.then(async()=>{
     const stored = await chrome.storage.local.get('appearancePresets');
     let presets = WeavyAppearance.sanitizePresets(stored.appearancePresets);
     const id = message.id;
@@ -223,8 +224,57 @@ function mutatePreset(message) {
     await chrome.storage.local.set({appearancePresets:presets});
     return {presets};
   });
-  settingsWriteQueue=write.catch(()=>{});
+  storageWriteQueue=write.catch(()=>{});
   return write;
+}
+
+let settingsOpenMode='tab',defaultsReady=null;
+async function configureOptions(mode){
+  settingsOpenMode=mode==='sidePanel'?'sidePanel':'tab';
+  await chrome.sidePanel.setPanelBehavior({openPanelOnActionClick:settingsOpenMode==='sidePanel'});
+}
+function ensureDefaults(){
+  if(defaultsReady)return defaultsReady;
+  const write=storageWriteQueue.then(async()=>{
+    const stored=await chrome.storage.local.get(['clips','settings','factorySeedVersion']);
+    const values={};
+    if(!Object.hasOwn(stored,'clips')||!stored.settings){
+      const response=await fetch(chrome.runtime.getURL('default-backup.json'));
+      if(!response.ok)throw new Error('Could not load bundled defaults');
+      const seed=WeavyClips.validateBackup(await response.json());
+      if(!Object.hasOwn(stored,'clips')){values.clips=seed.clips;values.clipsRevision=1;}
+      if(!stored.settings)values.settings=cleanSettings(seed.settings||{},WeavyDefaults.settings);
+    }
+    if(!stored.factorySeedVersion)values.factorySeedVersion=1;
+    if(Object.keys(values).length)await chrome.storage.local.set(values);
+    await configureOptions((values.settings||stored.settings||{}).settingsOpenMode);
+  });
+  storageWriteQueue=write.catch(()=>{});
+  defaultsReady=write.catch(error=>{defaultsReady=null;throw error});return defaultsReady;
+}
+function cleanSettings(raw,previous={}){
+  const known=Object.fromEntries(Object.keys(WeavyDefaults.settings).filter(k=>Object.hasOwn(raw,k)).map(k=>[k,raw[k]]));
+  const settings=WeavyAppearance.normalize({...WeavyDefaults.settings,...previous,...known,settingsSchemaVersion:8});
+  settings.settingsOpenMode=settings.settingsOpenMode==='sidePanel'?'sidePanel':'tab';
+  return settings;
+}
+function importBackup(data){
+  const write=storageWriteQueue.then(async()=>{
+    if(data==null){const response=await fetch(chrome.runtime.getURL('default-backup.json'));if(!response.ok)throw new Error('Could not load bundled defaults');data=await response.json();}
+    const backup=WeavyClips.validateBackup(data);
+    const stored=await chrome.storage.local.get(['clips','clipsRevision','settings','appearancePresets']);
+    const clips=stored.clips||[],ids=new Set(clips.map(c=>c.id)),incoming=backup.clips.filter(c=>!ids.has(c.id));
+    const maxOrder=clips.reduce((n,c)=>Math.max(n,Number(c.sortOrder)||0),-1);
+    incoming.forEach((c,i)=>c.sortOrder=maxOrder+i+1);
+    const settings=backup.settings?cleanSettings(backup.settings,stored.settings):stored.settings;
+    if(settings)settings._revision=(Number(stored.settings?._revision)||0)+1;
+    const presets=WeavyAppearance.sanitizePresets(stored.appearancePresets),presetIds=new Set(presets.map(p=>p.id));
+    presets.push(...WeavyAppearance.sanitizePresets(backup.appearancePresets).filter(p=>!presetIds.has(p.id)));
+    await chrome.storage.local.set({clips:[...clips,...incoming],clipsRevision:(Number(stored.clipsRevision)||0)+1,settings,appearancePresets:presets});
+    await configureOptions(settings?.settingsOpenMode);
+    return {added:incoming.length,skipped:backup.clips.length-incoming.length};
+  });
+  storageWriteQueue=write.catch(()=>{});return write;
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
@@ -242,12 +292,19 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
-  if (msg.action === 'openOptions') {
-    if (sender.tab?.windowId == null) { sendResponse({success:false,error:'Open from a Weavy tab'}); return true; }
-    // Call directly in the click-message handler to retain the user gesture.
-    chrome.sidePanel.open({windowId:sender.tab.windowId})
-      .then(()=>sendResponse({success:true}))
-      .catch(error=>sendResponse({success:false,error:error.message}));
+  if (msg.action === 'initializeDefaults' && sender.id === chrome.runtime.id) {
+    ensureDefaults().then(()=>sendResponse({success:true})).catch(error=>sendResponse({success:false,error:error.message}));return true;
+  }
+  if ((msg.action === 'importBackup'||msg.action === 'applyFactoryDefaults') && sender.id === chrome.runtime.id) {
+    importBackup(msg.action==='applyFactoryDefaults'?null:msg.data).then(result=>sendResponse({success:true,...result})).catch(error=>sendResponse({success:false,error:error.message}));return true;
+  }
+  if (msg.action === 'openOptions' && sender.id === chrome.runtime.id) {
+    const mode=msg.mode==='sidePanel'?'sidePanel':msg.mode==='tab'?'tab':settingsOpenMode;
+    if(mode==='sidePanel'){
+      if(sender.tab?.windowId==null){sendResponse({success:false,error:'Open from a Weavy tab'});return true;}
+      // Keep sidePanel.open directly in the user-gesture message handler.
+      chrome.sidePanel.open({windowId:sender.tab.windowId}).then(()=>sendResponse({success:true})).catch(error=>sendResponse({success:false,error:error.message}));
+    }else chrome.runtime.openOptionsPage().then(()=>sendResponse({success:true})).catch(error=>sendResponse({success:false,error:error.message}));
     return true;
   }
 
@@ -280,5 +337,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 });
 
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('[WeavyClips] Extension installed');
+  ensureDefaults().catch(console.error);
 });
+
+// Native toolbar clicks open the panel when configured by Chrome, or a full tab.
+chrome.action?.onClicked.addListener(async()=>{
+  await ensureDefaults();
+  if(settingsOpenMode!=='sidePanel')await chrome.runtime.openOptionsPage();
+});
+ensureDefaults().catch(console.error);

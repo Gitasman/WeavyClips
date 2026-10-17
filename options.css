@@ -90,3 +90,4 @@ body{padding-top:0}
 #clips-save-status{font-size:11px;color:color-mix(in srgb,#e23445 70%,var(--panel-fg))}
 .toast{display:flex;align-items:center;gap:14px;max-width:calc(100vw - 32px)}
 .toast button{border:1px solid currentColor;border-radius:6px;background:transparent;color:inherit;padding:4px 8px;font:inherit;cursor:pointer}
+.settings-open-field{max-width:320px;margin-top:14px}

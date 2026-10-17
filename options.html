@@ -17,6 +17,20 @@
 
 
 
+    <section id="backup-section">
+      <h2>💾 Backup</h2>
+      <p class="section-help">Export a copy, import a backup, or apply the defaults bundled with this build. Existing clips are kept.</p>
+
+      <div class="button-row">
+        <button id="import-btn" class="btn-secondary">📥 Import JSON</button>
+        <button id="export-btn" class="btn-secondary">📤 Export JSON</button>
+        <button id="apply-defaults-btn" class="btn-secondary">↺ Apply bundled defaults</button>
+        <button id="clear-btn" class="btn-danger">🗑️ Clear All Clips</button>
+      </div>
+      <input type="file" id="import-file" accept=".json" hidden>
+      <label class="field settings-open-field"><span>Open settings in</span><select id="settings-open-mode"><option value="tab">New tab (default)</option><option value="sidePanel">Chrome side panel</option></select></label>
+    </section>
+
     <section id="appearance-section">
       <div class="section-head">
         <h2>🎨 Appearance</h2>
@@ -83,15 +97,7 @@
       <div id="clips-list" class="clips-list"></div>
     </section>
 
-    <section>
-      <h2>💾 Backup</h2>
-      <div class="button-row">
-        <button id="import-btn" class="btn-secondary">📥 Import JSON</button>
-        <button id="export-btn" class="btn-secondary">📤 Export JSON</button>
-        <button id="clear-btn" class="btn-danger">🗑️ Clear All Clips</button>
-      </div>
-      <input type="file" id="import-file" accept=".json" hidden>
-    </section>
+
 
     <section id="dock-position-section">
       <h2>📐 Default Dock Position</h2>
@@ -197,7 +203,9 @@
     <footer>Weavy Clips <span data-version></span> · MOSAIC design</footer>
   </div>
   <script src="appearance.js"></script>
+  <script src="factory.js"></script>
   <script src="clips.js"></script>
+  <script src="backup.js"></script>
   <script src="ui.js"></script>
   <script src="options.js"></script>
 </body>

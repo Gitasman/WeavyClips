@@ -2,9 +2,9 @@
 (() => {
   const defaults = Object.freeze({
     accentColor: '#ffffff', bgColor: '#1e1e1e', borderRadius: 11,
-    dockButtonSize: 36, dockOpacity: 100, dockBlur: 7, dockShadow: 13, accentMode: 'normal',
-    dockShadowSoftness: 13, dockShadowDirection: 90, dockShadowDistance: 3.25,
-    dockBorderWidth: 1, dockBorderColor: '#ffffff', dockBorderOpacity: 14,
+    dockButtonSize: 36, dockOpacity: 0, dockBlur: 5, dockShadow: 41, accentMode: 'normal',
+    dockShadowSoftness: 18, dockShadowDirection: 90, dockShadowDistance: 3.25,
+    dockBorderWidth: 1, dockBorderColor: '#ffffff', dockBorderOpacity: 6,
     settingsBgColor: '#1e1e1e', settingsPanelColor: '#2b2b2b', settingsAccentColor: '#ffffff',
     settingsPatternSpacing: 16, settingsPatternOpacity: 11, settingsPatternEnabled: true
   });

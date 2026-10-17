@@ -1,42 +1,6 @@
 console.log('[WeavyClips] Content script loaded');
 
-const DEFAULT_SETTINGS = {
-  accentColor: '#faffc7',
-  bgColor: '#212126',
-  borderRadius: 9,
-  dockButtonSize: 36,
-  dockOpacity: 100,
-  dockBlur: 0,
-  dockShadow: 32,
-  accentMode: 'normal',
-  pasteMethod: 'datatransfer',
-  captureSelectionBeforeSave: true,
-  captureSelectionMethod: 'synthetic_ctrlc',
-  verifySelectionCopy: true,
-  smartAllowDebugger: false,
-  duplicateBehavior: 'warn',
-  maxVersions: 25,
-  restoreClipboardAfterDebuggerPaste: false,
-  quickPasteEnabled: false,
-  settingsSchemaVersion: 8,
-  defaultDockHorizontalAnchor: 'center',
-  defaultDockHorizontalOffset: 140,
-  defaultDockVerticalAnchor: 'bottom',
-  defaultDockVerticalOffset: 11,
-  dockLeft: 'calc(50% + 140px)',
-  dockRight: 'auto',
-  dockTop: 'auto',
-  dockBottom: '11px',
-  dockOverflowMode: 'unlimited',
-  dockMaxWidth: 900,
-  clampDock: true,
-  snapDock: false,
-  perProjectPosition: true,
-  showDragGuides: true,
-  showDeleteConfirm: false,
-  siteMode: 'weavy_only',
-  ...WeavyAppearance.defaults, dockAutoHide: false
-};
+const DEFAULT_SETTINGS = WeavyDefaults.settings;
 
 function normalizeSettings(rawSettings = {}) {
   const settings = WeavyAppearance.normalize(Object.assign({}, DEFAULT_SETTINGS, rawSettings || {}));
@@ -127,7 +91,8 @@ function getRotatingIcon(type, counters) {
   return { icon: TEXT_ICONS[idx], nextIdx: { ...counters, textIdx: (counters.textIdx || 0) + 1 } };
 }
 
-function init() {
+async function init() {
+  await chrome.runtime.sendMessage({action:'initializeDefaults'});
   console.log('[WeavyClips] Initializing...');
   chrome.storage.local.get(['clips', 'clipsRevision', 'settings', 'dockPositions'], (result) => {
     state.clips = result.clips || [];
@@ -792,10 +757,10 @@ function attachDockListeners() {
     settingsBtn.addEventListener('click', () => {
       console.log('[WeavyClips] Settings button clicked');
       try {
-        chrome.runtime.sendMessage({ action: 'openOptions' }, (response) => {
+        chrome.runtime.sendMessage({ action: 'openOptions', mode:state.settings.settingsOpenMode }, (response) => {
           if (chrome.runtime.lastError || response?.success === false) {
             console.error('[WeavyClips] Failed to open panel:', chrome.runtime.lastError?.message||response.error);
-            showToast('⚠️ Could not open side panel. Try the extension icon in Chrome.');
+            showToast('⚠️ Could not open settings. Try the extension icon in Chrome.');
           }
         });
       } catch (err) {
@@ -915,37 +880,24 @@ async function handleClipClick(e) {
   await pasteClip(clip);
 }
 
-function showTooltip(e) {
-  const btn = e.target.closest('[data-clip-id]');
-  if (!btn) return;
-  const clip = state.clips.find(c => c.id === btn.dataset.clipId);
-  if (!clip) return;
-  let tooltip = document.getElementById('wc-tooltip');
-  if (!tooltip) {
-    tooltip = document.createElement('div'); tooltip.id = 'wc-tooltip'; tooltip.className = 'wc-tooltip';
-    document.body.appendChild(tooltip);
-  }
-  const text = typeof clip.content === 'string' ? clip.content : JSON.stringify(clip.content);
-  const preview = clip.type === 'image'
-    ? `<img src="${clip.content}" style="max-height:70px;max-width:220px;border-radius:5px;margin-top:6px;">`
-    : `<div class="wc-tooltip-preview">${escapeHtml((text || '').slice(0,120))}${(text||'').length>120?'…':''}</div>`;
-  tooltip.innerHTML = `<div class="wc-tooltip-name">${escapeHtml(clip.name)} ${clip.locked?'🔒':''}</div>
-    <div class="wc-tooltip-date">${String(clip.type).toUpperCase()} · ${formatDate(clip.updatedAt || clip.createdAt)}</div>
-    <div class="wc-tooltip-meta2">Used ${clip.usageCount||0} · ${clip.versions?.length||0} versions${clip.group?` · ${escapeHtml(clip.group)}`:''}</div>${preview}`;
-  const rect = btn.getBoundingClientRect();
-  const openDown = rect.top < 150;
-  tooltip.style.left = (rect.left + rect.width/2) + 'px';
-  tooltip.style.top = openDown ? (rect.bottom + 10) + 'px' : (rect.top - 10) + 'px';
-  tooltip.style.bottom = 'auto';
-  tooltip.style.transform = openDown ? 'translate(-50%,0)' : 'translate(-50%,-100%)';
-  tooltip.style.opacity = '1';
+function showTooltip(e){
+  if(state.contextMenu)return;
+  const btn=e.target.closest('[data-clip-id]'),clip=state.clips.find(c=>c.id===btn?.dataset.clipId);if(!clip)return;
+  let tooltip=document.getElementById('wc-tooltip');
+  if(!tooltip){tooltip=document.createElement('div');tooltip.id='wc-tooltip';tooltip.className='wc-tooltip';tooltip.setAttribute('role','tooltip');document.body.appendChild(tooltip);}
+  const title=document.createElement('div');title.className='wc-tooltip-name';title.textContent=clip.name;
+  const time=document.createElement('time');time.className='wc-tooltip-date';const stamp=Number(clip.updatedAt||clip.createdAt);
+  if(Number.isFinite(stamp)&&stamp>0){time.textContent=formatDate(stamp);time.setAttribute('datetime',new Date(stamp).toISOString());}else time.textContent='—';
+  tooltip.replaceChildren(title,time);btn.setAttribute('aria-describedby','wc-tooltip');
+  const r=btn.getBoundingClientRect();tooltip.style.transform='none';tooltip.style.bottom='auto';
+  const size=tooltip.getBoundingClientRect(),margin=8;
+  tooltip.style.left=Math.max(margin,Math.min(r.left+r.width/2-size.width/2,innerWidth-size.width-margin))+'px';
+  const top=r.top>=size.height+margin*2?r.top-size.height-margin:r.bottom+margin;
+  tooltip.style.top=Math.max(margin,Math.min(top,innerHeight-size.height-margin))+'px';tooltip.style.opacity='1';
 }
-
-function hideTooltip() {
-  const tooltip = document.getElementById('wc-tooltip');
-  if (tooltip) {
-    tooltip.style.opacity = '0';
-  }
+function hideTooltip(){
+  const tooltip=document.getElementById('wc-tooltip');if(tooltip)tooltip.style.opacity='0';
+  document.querySelectorAll('[aria-describedby="wc-tooltip"]').forEach(el=>el.removeAttribute('aria-describedby'));
 }
 
 function escapeHtml(text) {
@@ -965,38 +917,31 @@ async function writeClipToClipboard(clip) {
   await navigator.clipboard.writeText(str);
 }
 
-function showContextMenu(e) {
-  e.preventDefault(); hideContextMenu();
-  const btn = e.target.closest('[data-clip-id]'); if (!btn) return;
-  const clipId = btn.dataset.clipId; const clip = state.clips.find(c => c.id === clipId); if (!clip) return;
-  const menu = document.createElement('div'); menu.className = 'wc-context-menu';
-  menu.innerHTML = `
-    <div class="wc-context-item" data-action="copy" data-clip-id="${clipId}">📋 Copy</div>
-    <div class="wc-context-item" data-action="update" data-clip-id="${clipId}">🔄 Update</div>
-    <div class="wc-context-item" data-action="history" data-clip-id="${clipId}">🕘 Version history</div>
-    <div class="wc-context-divider"></div>
-    <div class="wc-context-item" data-action="rename" data-clip-id="${clipId}">✏️ Rename</div>
-    <div class="wc-context-item" data-action="lock" data-clip-id="${clipId}">${clip.locked?'🔓 Unlock':'🔒 Lock'}</div>
-    <div class="wc-context-item" data-action="toggle-pin" data-clip-id="${clipId}">${clip.pinned?'📌 Unpin':'📍 Pin'}</div>
-    <div class="wc-context-divider"></div>
-    <div class="wc-context-item wc-context-danger" data-action="delete" data-clip-id="${clipId}">🗑️ Delete</div>`;
-  document.body.appendChild(menu); state.contextMenu = menu;
-  const triggerRect = btn.getBoundingClientRect(); const menuRect = menu.getBoundingClientRect(); const gap=8, vg=8;
-  const spaceAbove=triggerRect.top-vg, spaceBelow=window.innerHeight-triggerRect.bottom-vg;
-  const openDown=spaceBelow>=menuRect.height+gap || spaceBelow>=spaceAbove;
-  let top=openDown?triggerRect.bottom+gap:triggerRect.top-menuRect.height-gap;
-  top=Math.min(Math.max(vg,top),Math.max(vg,window.innerHeight-menuRect.height-vg));
-  let left=Math.min(Math.max(vg,e.clientX),Math.max(vg,window.innerWidth-menuRect.width-vg));
-  menu.style.left=`${left}px`; menu.style.top=`${top}px`;
-  menu.querySelectorAll('.wc-context-item').forEach(item=>item.addEventListener('click',handleContextMenuClick));
-  setTimeout(()=>document.addEventListener('click',hideContextMenu,{once:true}),0);
+function showContextMenu(e){
+  e.preventDefault();hideContextMenu();hideTooltip();
+  const btn=e.target.closest('[data-clip-id]'),clip=state.clips.find(c=>c.id===btn?.dataset.clipId);if(!clip)return;
+  const menu=document.createElement('div');menu.className='wc-context-menu';menu.setAttribute('role','menu');menu.setAttribute('aria-label','Clip actions');menu._trigger=btn;
+  const actions=[['copy','📋','Copy'],['update','🔄','Update'],['history','🕘','Version history'],['rename','✏️','Rename'],['delete','🗑️','Delete']];
+  menu.innerHTML=actions.map(([action,icon,label])=>`${action==='delete'?'<div class="wc-context-divider" role="separator"></div>':''}<button type="button" role="menuitem" class="wc-context-item ${action==='delete'?'wc-context-danger':''}" data-action="${action}" data-clip-id="${escapeHtml(clip.id)}" ${clip.locked&&['update','delete'].includes(action)?'disabled title="Unlock in Library or Clips Manager first"':''}><span class="wc-menu-glyph" aria-hidden="true">${icon}</span><span>${label}</span></button>`).join('');
+  document.body.appendChild(menu);state.contextMenu=menu;
+  const r=btn.getBoundingClientRect(),m=menu.getBoundingClientRect(),gap=8;
+  const openDown=innerHeight-r.bottom>=m.height+gap||innerHeight-r.bottom>=r.top;
+  menu.style.top=Math.max(gap,Math.min(openDown?r.bottom+gap:r.top-m.height-gap,innerHeight-m.height-gap))+'px';
+  menu.style.left=Math.max(gap,Math.min(e.clientX,innerWidth-m.width-gap))+'px';
+  menu.querySelectorAll('button').forEach(item=>item.onclick=handleContextMenuClick);
+  const outside=event=>{if(!menu.contains(event.target))hideContextMenu()};document.addEventListener('click',outside);menu._outside=outside;
+  menu.onkeydown=event=>{
+    if(event.target.matches('input'))return;
+    if(event.key==='Escape'){event.preventDefault();hideContextMenu();btn.focus();}
+    if(['ArrowDown','ArrowUp','Home','End'].includes(event.key)){
+      event.preventDefault();const buttons=[...menu.querySelectorAll('button:not(:disabled)')],i=buttons.indexOf(document.activeElement);
+      const index=event.key==='Home'?0:event.key==='End'?buttons.length-1:(i+(event.key==='ArrowDown'?1:buttons.length-1))%buttons.length;buttons[index]?.focus();
+    }
+  };
+  menu.querySelector('button:not(:disabled)')?.focus();
 }
-
-function hideContextMenu() {
-  if (state.contextMenu) {
-    state.contextMenu.remove();
-    state.contextMenu = null;
-  }
+function hideContextMenu(){
+  if(state.contextMenu){const menu=state.contextMenu;state.contextMenu=null;menu._cancelRename?.();document.removeEventListener('click',menu._outside);menu.remove();}
 }
 
 async function handleContextMenuClick(e) {
@@ -1011,8 +956,7 @@ async function handleContextMenuClick(e) {
     if(clip.locked){showToast('🔒 Unlock clip before updating');return;}
     try{const changed=await updateClipContent(clip);showToast(changed?'🔄 Updated: '+clip.name:'No content change')}catch(error){showToast('❌ '+(error.message||'Update failed'))}
   } else if(action==='history') showClipHistory(clip);
-  else if(action==='lock'){clip.locked=!clip.locked;saveClips(true);renderDock();showToast(clip.locked?'🔒 Locked':'🔓 Unlocked');}
-  else if(action==='toggle-pin'){clip.pinned=!clip.pinned;saveClips(true);renderDock();showToast(clip.pinned?'📌 Pinned':'📌 Unpinned');} else if(action==='delete'){
+  else if(action==='delete'){
     if(clip.locked){showToast('🔒 Unlock clip before deleting');return;}
     if(state.settings.showDeleteConfirm&&!confirm(`Delete "${clip.name}"?`))return;
     const index=state.clips.findIndex(c=>c.id===clipId); const removed=state.clips[index];
@@ -1020,40 +964,15 @@ async function handleContextMenuClick(e) {
   }
 }
 
-function startRename(clip, menuItem) {
-  const menu = state.contextMenu;
-  if (!menu) return;
-  
-  const input = document.createElement('input');
-  input.type = 'text';
-  input.value = clip.name;
-  input.className = 'wc-rename-input';
-  input.style.width = '120px';
-  
-  menuItem.innerHTML = '';
-  menuItem.appendChild(input);
-  input.addEventListener('mousedown', (e) => e.stopPropagation());
-  input.addEventListener('click', (e) => e.stopPropagation());
-  input.focus();
-  input.select();
-  
-  const finishRename = () => {
-    const newName = input.value.trim();
-    if (newName && newName !== clip.name) {
-      clip.name = newName;
-      saveClips();
-      renderDock();
-      showToast('✏️ Renamed to: ' + newName);
-    }
-    hideContextMenu();
-  };
-  
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') finishRename();
-    if (e.key === 'Escape') hideContextMenu();
-  });
-  
-  input.addEventListener('blur', finishRename);
+function startRename(clip,menuItem){
+  const menu=state.contextMenu;if(!menu)return;
+  const editor=document.createElement('div');editor.className='wc-context-editor';
+  const input=document.createElement('input');input.type='text';input.value=clip.name;input.className='wc-rename-input';input.setAttribute('aria-label','Clip name');editor.appendChild(input);menuItem.replaceWith(editor);
+  let finished=false;menu._cancelRename=()=>{finished=true};
+  const done=(cancel=false)=>{if(finished)return;finished=true;const current=state.clips.find(c=>c.id===clip.id),name=input.value.trim();if(!cancel&&current&&name&&name!==current.name){current.name=name;saveClips();renderDock();showToast('✏️ Renamed to: '+name)}hideContextMenu();menu._trigger?.focus({preventScroll:true});};
+  input.addEventListener('click',event=>event.stopPropagation());
+  input.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key==='Escape'){event.preventDefault();event.stopPropagation();done(event.key==='Escape')}});
+  input.addEventListener('blur',()=>done());input.focus();input.select();
 }
 
 const PRESET_ICONS = ['📦', '🔥', '⚡', '🎨', '🖼', '📝', '✨', '🎯', '💡', '🔷', '⭐', '🚀', '🎬', '❤️', '💎', '🌊'];
@@ -1075,7 +994,7 @@ function openLibraryModal(focusClipId = null) {
   panel.style.bottom = openAbove ? `${window.innerHeight - dockRect.top + 8}px` : 'auto';
   state.libraryModal = panel;
 
-  panel.innerHTML=`<div class="wc-lib-header"><span id="wc-library-count" style="font-weight:600;font-size:14px">🗂 Library</span><div class="wc-lib-header-actions"><button id="wc-library-reset" class="wc-lib-header-btn" title="Reset dock position" aria-label="Reset dock position">↺</button><button id="wc-library-close" class="wc-lib-header-btn" aria-label="Close">×</button></div></div><input class="wc-lib-search" id="wc-lib-search" placeholder="Search clips… (Alt+K for quick search)" value="${escapeHtml(state.librarySearch)}"><div id="wc-lib-list"></div>`;
+  panel.innerHTML=`<div class="wc-lib-header"><span id="wc-library-count" style="font-weight:600;font-size:14px">🗂 Library</span><div class="wc-lib-header-actions"><button id="wc-library-backup" class="wc-lib-header-btn" title="Import or export backup" aria-label="Import or export backup" aria-expanded="false">⇅</button><button id="wc-library-reset" class="wc-lib-header-btn" title="Reset dock position" aria-label="Reset dock position">↺</button><button id="wc-library-close" class="wc-lib-header-btn" aria-label="Close">×</button></div></div><input class="wc-lib-search" id="wc-lib-search" placeholder="Search clips… (Alt+K for quick search)" value="${escapeHtml(state.librarySearch)}"><div id="wc-lib-list"></div>`;
   const root=panel.querySelector('#wc-lib-list');
   const renderRow=clip=>`<div class="wc-lib-item ${clip.locked?'wc-lib-lock':''}" draggable="true" data-clip-id="${escapeHtml(clip.id)}" title="Drag to reorder">
         <div class="wc-lib-top-row">
@@ -1089,8 +1008,8 @@ function openLibraryModal(focusClipId = null) {
             <button class="wc-lib-action" data-action="copy" data-clip-id="${escapeHtml(clip.id)}" title="Copy">📋</button>
             <button class="wc-lib-action" data-action="update" data-clip-id="${escapeHtml(clip.id)}" title="Update">🔄</button>
             <button class="wc-lib-action" data-action="history" data-clip-id="${escapeHtml(clip.id)}" title="Version history">🕘</button>
-            <button class="wc-lib-action" data-action="lock" data-clip-id="${escapeHtml(clip.id)}" title="${clip.locked?'Unlock':'Lock'}">${clip.locked?'🔒':'🔓'}</button>
-            <button class="wc-lib-action" data-action="toggle-pin" data-clip-id="${escapeHtml(clip.id)}" title="${clip.pinned?'Unpin':'Pin'}">${clip.pinned?'📌':'📍'}</button>
+            <button class="wc-lib-action" data-action="lock" data-clip-id="${escapeHtml(clip.id)}" title="${clip.locked?'Unlock · allow updates and deletion':'Lock · protect content and deletion'}">${clip.locked?'🔒':'🔓'}</button>
+            <button class="wc-lib-action" data-action="toggle-pin" data-clip-id="${escapeHtml(clip.id)}" title="${clip.pinned?'Unpin · hide from dock':'Pin · show on dock'}">${clip.pinned?'📌':'📍'}</button>
             <button class="wc-lib-action wc-lib-delete" data-action="delete" data-clip-id="${escapeHtml(clip.id)}" title="Delete">🗑️</button>
           </div>
         </div>
@@ -1123,11 +1042,25 @@ function openLibraryModal(focusClipId = null) {
     if(focusClipId){const index=filtered.findIndex(c=>c.id===focusClipId);if(index>=0)list.scrollToIndex(index);focusClipId=null;}
   };
   panel._refresh=focus=>{focusClipId=focus;renderList()};
+  panel.querySelector('#wc-library-backup').onclick=event=>{event.stopPropagation();openLibraryBackupMenu(event.currentTarget)};
   panel.querySelector('#wc-library-close').onclick=closeLibraryModal;
   panel.querySelector('#wc-library-reset').onclick=e=>{e.stopPropagation();resetDockPosition();closeLibraryModal()};
   panel.querySelector('#wc-lib-search').oninput=e=>{state.librarySearch=e.target.value;root.scrollTop=0;renderList()};
   renderList();
-  setTimeout(()=>document.addEventListener('click',function outside(ev){if(!panel.isConnected){document.removeEventListener('click',outside);return;}if(!panel.contains(ev.target)&&!ev.target.closest('#wc-library-btn,#wc-icon-picker,.wc-history-overlay,#wc-command-palette')){closeLibraryModal();document.removeEventListener('click',outside);}},false),0);
+  setTimeout(()=>document.addEventListener('click',function outside(ev){if(!panel.isConnected){document.removeEventListener('click',outside);return;}if(!panel.contains(ev.target)&&!ev.target.closest('#wc-library-btn,#wc-icon-picker,#wc-backup-menu,.wc-history-overlay,#wc-command-palette')){closeLibraryModal();document.removeEventListener('click',outside);}},false),0);
+}
+
+function openLibraryBackupMenu(anchor){
+  const existing=document.getElementById('wc-backup-menu');if(existing){existing._dispose();return;}
+  const menu=document.createElement('div');menu.id='wc-backup-menu';menu.className='wc-context-menu';menu.setAttribute('role','menu');menu.setAttribute('aria-label','Backup');
+  menu.innerHTML='<button type="button" role="menuitem" class="wc-context-item" data-backup="export"><span class="wc-menu-glyph">📤</span>Export JSON</button><button type="button" role="menuitem" class="wc-context-item" data-backup="import"><span class="wc-menu-glyph">📥</span>Import JSON</button>';
+  document.body.appendChild(menu);anchor.setAttribute('aria-expanded','true');
+  const r=anchor.getBoundingClientRect(),m=menu.getBoundingClientRect();menu.style.left=Math.max(8,Math.min(r.right-m.width,innerWidth-m.width-8))+'px';menu.style.top=Math.max(8,Math.min(r.bottom+6,innerHeight-m.height-8))+'px';
+  const close=()=>{menu.remove();document.removeEventListener('click',outside);anchor.setAttribute('aria-expanded','false');};
+  const outside=event=>{if(!menu.contains(event.target)&&!anchor.contains(event.target))close()};document.addEventListener('click',outside);menu._dispose=close;
+  menu.onkeydown=event=>{if(event.key==='Escape'){event.preventDefault();close();anchor.focus();}if(event.key==='ArrowDown'||event.key==='ArrowUp'){event.preventDefault();const buttons=[...menu.querySelectorAll('button')],i=buttons.indexOf(document.activeElement);buttons[(i+(event.key==='ArrowDown'?1:buttons.length-1))%buttons.length].focus();}};
+  menu.querySelectorAll('[data-backup]').forEach(button=>button.onclick=()=>{close();const options={before:()=>clipStore.flush(),report:showToast};if(button.dataset.backup==='import')WeavyBackup.chooseFile(options);else WeavyBackup.exportFile(options);});
+  menu.querySelector('button').focus();
 }
 
 function openLibraryIconPicker(clipId, anchor, refresh) {
@@ -1141,6 +1074,7 @@ function openLibraryIconPicker(clipId, anchor, refresh) {
 
 function closeLibraryModal() {
   if (state.libraryModal) {
+    document.getElementById('wc-backup-menu')?._dispose?.();
     state.libraryModal._virtualList?.destroy();
     state.libraryModal.remove();
     state.libraryModal = null;

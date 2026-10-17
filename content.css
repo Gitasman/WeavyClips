@@ -122,54 +122,6 @@
   transform: scale(0.95);
 }
 
-.wc-tooltip {
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  margin-bottom: 8px;
-  background: #2a2a35;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 12px;
-  white-space: nowrap;
-  z-index: 1000000;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-.wc-tooltip.visible {
-  opacity: 1;
-}
-
-.wc-tooltip-row {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.wc-tooltip-name {
-  font-weight: 600;
-  color: #fff;
-}
-
-.wc-tooltip-date {
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 11px;
-}
-
-.wc-tooltip-preview {
-  color: rgba(255, 255, 255, 0.7);
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin-top: 4px;
-  padding-top: 4px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
 
 .wc-toast {
   position: fixed;
@@ -193,34 +145,6 @@
   opacity: 1;
 }
 
-.wc-context-menu {
-  position: fixed;
-  background: #2a2a35;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 4px 0;
-  z-index: 1000002;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-  min-width: 140px;
-}
-
-.wc-context-item {
-  padding: 8px 16px;
-  cursor: pointer;
-  font-size: 13px;
-  color: #fff;
-  transition: background 0.15s ease;
-}
-
-.wc-context-item:hover {
-  background: var(--wc-accent, #faffc7);
-}
-
-.wc-context-divider {
-  height: 1px;
-  background: rgba(255, 255, 255, 0.1);
-  margin: 4px 0;
-}
 
 .wc-modal-overlay {
   position: fixed;
@@ -648,24 +572,6 @@
   box-shadow: inset 0 -3px 0 var(--wc-accent, #faffc7);
 }
 
-/* Keep context menu inside the viewport and make the expanded action set readable. */
-.wc-context-menu {
-  min-width: 180px;
-  max-width: min(240px, calc(100vw - 16px));
-}
-
-.wc-context-item {
-  white-space: nowrap;
-}
-
-.wc-context-item:hover {
-  color: #212126;
-}
-
-.wc-context-danger {
-  color: #ef7777;
-}
-
 /* v2 appearance + behavior overrides */
 #wc-dock button,
 #wc-dock [data-clip-id] {
@@ -683,7 +589,6 @@
 .wc-lib-search { width:100%; margin:0 0 10px; padding:8px 10px; border-radius:8px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.06); color:#fff; outline:none; }
 .wc-lib-group { font-size:10px; color:rgba(255,255,255,.45); text-transform:uppercase; letter-spacing:.06em; margin:10px 4px 5px; }
 .wc-lib-lock { opacity:.75; }
-.wc-tooltip-meta2 { color:rgba(255,255,255,.55); font-size:11px; margin-top:5px; }
 .wc-drag-guide { position:fixed; z-index:999997; pointer-events:none; background:var(--wc-accent,#faffc7); opacity:.45; }
 #wc-clips-row .wc-group-divider{width:1px;height:24px;background:rgba(255,255,255,.16);margin:0 3px;flex:0 0 1px}.wc-clip-btn.wc-locked:after{content:'•';position:absolute;right:3px;top:1px;font-size:8px;color:var(--wc-accent,#faffc7)}
 
@@ -747,6 +652,29 @@
 #wc-library-panel .wc-lib-preview{white-space:nowrap}
 #wc-library-panel .wc-lib-meta-row{max-width:45%}
 #wc-dock[data-auto-hide=true]{transition:clip-path .16s ease}
+.wc-context-menu,#wc-tooltip{
+  box-sizing:border-box;position:fixed;max-width:calc(100vw - 16px);
+  background:var(--wc-bg,#1e1e1e);color:var(--wc-on-bg,#fff);
+  border:var(--wc-border-width,1px) solid var(--wc-border-color,#ffffff24);
+  border-radius:var(--wc-radius,11px);box-shadow:var(--wc-shadow,none);
+  backdrop-filter:var(--wc-blur,none);font:12px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+.wc-context-menu{min-width:172px;padding:5px;max-height:calc(100vh - 16px);overflow:auto;animation:wc-panel-enter .12s ease-out}
+.wc-context-menu .wc-context-item{box-sizing:border-box;display:flex;align-items:center;gap:9px;width:100%;min-height:30px;padding:6px 9px;margin:0;border:0;border-radius:max(0px,calc(var(--wc-radius,11px) - 4px));background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer;white-space:nowrap;transition:background-color .12s ease,color .12s ease}
+.wc-context-menu .wc-context-item:is(:hover,:focus-visible):not(:disabled){background:var(--wc-accent,#fff);color:var(--wc-on-accent,#16161d);outline:none}
+.wc-context-menu .wc-context-danger{color:color-mix(in srgb,#e54855 82%,var(--wc-on-bg,#fff))}
+.wc-context-menu .wc-context-item:disabled{opacity:.4;cursor:not-allowed}
+.wc-context-menu .wc-menu-glyph{display:inline-flex;align-items:center;justify-content:center;width:18px;flex:0 0 18px;line-height:1;transform:translateY(-1px);font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",system-ui}
+.wc-context-menu .wc-context-divider{margin:4px 5px;background:color-mix(in srgb,var(--wc-on-bg,#fff) 12%,transparent)}
+.wc-context-menu .wc-context-editor{padding:3px}
+.wc-context-menu .wc-rename-input{box-sizing:border-box;width:100%;min-width:140px;padding:6px 8px;border:1px solid var(--wc-accent,#fff);border-radius:var(--wc-button-radius,10px);background:var(--wc-bg,#1e1e1e);color:var(--wc-on-bg,#fff);font:inherit;outline:2px solid color-mix(in srgb,var(--wc-accent,#fff) 25%,transparent);outline-offset:1px}
+#wc-tooltip{width:max-content;max-width:min(280px,calc(100vw - 16px));padding:9px 12px;margin:0;white-space:normal;transition:opacity .12s ease;pointer-events:none}
+#wc-tooltip .wc-tooltip-name{color:inherit;font-size:12px;font-weight:600;line-height:1.35;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#wc-tooltip .wc-tooltip-date{display:block;margin-top:4px;color:inherit;opacity:.6;font-size:10px;line-height:1.4}
+#wc-library-panel{background:var(--wc-bg,#1e1e1e)!important;border:var(--wc-border-width,1px) solid var(--wc-border-color,#ffffff24)!important;border-radius:var(--wc-radius,11px)!important;box-shadow:var(--wc-shadow,none)!important}
+#wc-library-panel .wc-lib-header-btn{color:var(--wc-on-bg,#fff);background:color-mix(in srgb,var(--wc-on-bg,#fff) 8%,transparent);border-radius:var(--wc-button-radius,10px)}
+#wc-library-panel .wc-lib-header-btn:is(:hover,:focus-visible){background:var(--wc-accent,#fff);color:var(--wc-on-accent,#16161d);outline:2px solid var(--wc-accent,#fff);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){.wc-context-menu{animation:none}.wc-context-menu .wc-context-item,#wc-tooltip{transition:none}}
 #wc-dock[data-auto-hide=true].wc-idle{clip-path:inset(0 calc(100% - 34px) 0 0 round var(--wc-radius))}
 #wc-dock[data-auto-hide=true].wc-idle button,#wc-dock[data-auto-hide=true].wc-idle #wc-clips-row{visibility:hidden}
 @media(prefers-reduced-motion:reduce){#wc-library-panel{animation:none}#wc-dock[data-auto-hide=true]{transition:none}}

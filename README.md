@@ -2,14 +2,14 @@
 
 **English** · [Русский](README-RU.md)
 
-**v2.3.0 · Chrome 116+ · app.weavy.ai**
+**v2.4.0 · Chrome 116+ · app.weavy.ai**
 
 Save clipboard content and reusable Weavy clips, then paste them from a compact floating dock.
 
 - Search your library with **Alt+K**, pin favorites, organize groups and keep clip history.
 - Customize the dock and settings page with independent colors, radii, opacity, blur, shadows and outlines.
 - Use built-in or personal appearance presets and export your library as JSON.
-- Open settings in Chrome’s native side panel, next to your canvas.
+- Open settings in a full tab by default, or choose Chrome’s native side panel.
 - Read the bundled **Help** guide in English or Russian, selected from your browser language with a manual override.
 
 ## Download and install
@@ -29,6 +29,22 @@ Keep the extracted folder after installation. **No Node.js, npm or build step is
 4. Click **Reload** for Weavy Clips in `chrome://extensions`, refresh **all** open Weavy tabs and reopen settings.
 
 Do not remove the extension or load a different folder: a different path can create a different extension ID and separate local storage. GitHub installations do not update automatically.
+
+## What changed in 2.4.0
+
+- **Backup comes first** in settings, with Import, Export and Apply bundled defaults.
+- **Settings open in a new tab by default.** Change Backup → Open settings in to use the native side panel. The dock gear and extension toolbar follow the preference.
+- **Library backup access.** The square ⇅ button beside Reset position and Close offers Export JSON and Import JSON using the same logic as settings.
+- **Minimal clip tooltips.** Only the name and one updated date, with wrapping and viewport clamping.
+- **Themed menus.** Context menus follow dock background, accent, foreground, radius, outline and shadow. Popup surfaces remain opaque for readability even when the dock itself is transparent.
+- **Focused context actions.** Copy, Update, Version history, Rename and Delete. Pin and Lock remain in Library and Clips Manager. Menus support keyboard navigation and Escape.
+- **Current factory appearance.** Transparent dock, 5 px blur, 85% shadow strength, 18 px softness and 6% outline opacity.
+
+### Bundled defaults and personal builds
+
+`default-backup.json` supplies settings and optional starter clips. Fresh installs apply it once; updates and intentionally empty existing libraries are preserved. **Apply bundled defaults** restores the bundled settings and adds missing starter IDs without replacing existing clips. Absolute saved screen coordinates are replaced by the configured relative dock anchor so the default works on different screens.
+
+The public repository includes the factory settings and an empty starter library. A personal build may include a private starter library and history. Do not commit personal backups or a populated starter file to the public repository.
 
 ## What changed in 2.3.0
 
@@ -63,10 +79,10 @@ This GitHub README is English with a manual Russian link. Automatic language sel
 | --- | --- |
 | Dock accent / background | `#ffffff` / `#1e1e1e` |
 | Corner radius / button size | 11 px / 36 px |
-| Opacity / backdrop blur | 100% / 7 px |
-| Shadow strength / softness | 27% / 13 px |
+| Opacity / backdrop blur | 0% / 5 px |
+| Shadow strength / softness | 85% / 18 px |
 | Shadow direction / distance | 90° / 3.25 px |
-| Outline width / color / opacity | 1 px / `#ffffff` / 14% |
+| Outline width / color / opacity | 1 px / `#ffffff` / 6% |
 | Settings background / sections / accent | `#1e1e1e` / `#2b2b2b` / `#ffffff` |
 | Background dots | enabled, 16 px spacing, 11% contrast |
 
@@ -123,6 +139,8 @@ The tests execute the real extension code with mocked Chrome transport and a Lin
 | --- | --- |
 | `manifest.json` | Chrome entry points, version and permissions |
 | `background.js` | Service worker, serialized writes, native copy/paste shortcuts |
+| `factory.js`, `default-backup.json` | Shared factory settings and optional starter library |
+| `backup.js` | Shared import/export UI and validation |
 | `clips.js` | Shared clip diffs, validation and retryable client writes |
 | `content.js`, `content.css` | Dock and library on the Weavy page |
 | `options.*` | Settings and Clips Manager |

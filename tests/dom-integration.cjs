@@ -8,9 +8,9 @@ const clients=[],errors=[];
 const clips=Array.from({length:1200},(_,i)=>({id:'clip-'+i,name:'Node '+i,content:i%20===0?'data:image/png;base64,YQ==':'Content '+i,type:i%20===0?'image':'text',icon:'📦',pinned:i<5,sortOrder:i,versions:[],createdAt:Date.now()}));
 const store={settings:{settingsSchemaVersion:8},clips};
 const storage={local:{async get(_,cb){const data=clone(store);if(cb)cb(data);return data},async set(values,cb){const change={};for(const [k,v]of Object.entries(values)){change[k]={oldValue:clone(store[k]??null),newValue:clone(v)};store[k]=clone(v)}clients.forEach(fn=>fn(change,'local'));cb?.()},getBytesInUse(_,cb){cb(100000)}},onChanged:{addListener(fn){clients.push(fn)}}};
-let listener,panelOpen,worker;
+let listener,panelOpen,worker,optionsOpened=0;
 const basic={console:{log(){},error(...args){errors.push(args.map(a=>String(a)).join(' '))}},setTimeout,clearTimeout,crypto:require('crypto').webcrypto,URL,queueMicrotask,matchMedia:()=>({matches:false}),ResizeObserver:class{observe(){}disconnect(){}},requestAnimationFrame:fn=>setTimeout(fn,0),cancelAnimationFrame:clearTimeout};
-worker=vm.createContext({...basic,importScripts:file=>vm.runInContext(read(file),worker),chrome:{storage,runtime:{id:'extension',onMessage:{addListener(fn){listener=fn}},onInstalled:{addListener(){}}},sidePanel:{async setPanelBehavior(){},async open(options){panelOpen=options}},tabs:{query:async()=>[]}}});
+worker=vm.createContext({...basic,importScripts:file=>vm.runInContext(read(file),worker),chrome:{storage,runtime:{id:'extension',openOptionsPage:async()=>{optionsOpened++},onMessage:{addListener(fn){listener=fn}},onInstalled:{addListener(){}}},sidePanel:{async setPanelBehavior(){},async open(options){panelOpen=options}},tabs:{query:async()=>[]}}});
 vm.runInContext(read('background.js'),worker);
 function makePage(html){
  const {document,window}=parseHTML(html);
@@ -27,7 +27,7 @@ function makePage(html){
  const chrome={storage,runtime:{id:'extension',getManifest:()=>JSON.parse(read('manifest.json')),onMessage:{addListener(){}},sendMessage(msg,cb){return new Promise(resolve=>{listener(clone(msg),{id:'extension',tab:{id:1,windowId:1}},result=>{cb?.(result);resolve(result)})})}},tabs:{query(_,cb){cb?.([]);return Promise.resolve([])}}};
  const context=vm.createContext({...basic,window,document,chrome,location:{origin:'https://app.weavy.ai',pathname:'/test'},innerWidth:1280,innerHeight:900,navigator:{clipboard:{writeText:async()=>{},write:async()=>{}}},confirm:()=>true,Blob,Event:window.Event,KeyboardEvent:window.Event});
  window.innerWidth=1280;window.innerHeight=900;
- for(const file of ['appearance.js','clips.js','ui.js'])vm.runInContext(read(file),context);
+ for(const file of ['appearance.js','factory.js','clips.js','backup.js','ui.js'])vm.runInContext(read(file),context);
  return {context,document,window};
 }
 let passed=0;function check(test,label){assert.ok(test,label);passed++;console.log('PASS '+label)}
@@ -37,6 +37,7 @@ let passed=0;function check(test,label){assert.ok(test,label);passed++;console.l
  check(d.querySelector('.settings-topbar').contains(d.getElementById('settings-nav'))&&d.querySelector('.settings-topbar').contains(d.querySelector('.compact-header')),'header and navigation share one topbar');
  check(d.documentElement.style.getPropertyValue('--settings-topbar-offset')==='412px','navigation offset follows measured topbar height');
  check(d.querySelectorAll('.section-body').length===9&&d.querySelectorAll('#settings-nav button').length===9,'all sections initialized with collapse + navigation');
+ check(d.querySelector('.container > section').id==='backup-section','Backup is the first section');
  check(d.querySelectorAll('#clips-list .clip-item').length>0&&d.querySelectorAll('#clips-list .clip-item').length<20,'1,200 clips create fewer than 20 manager rows');
  check(d.querySelectorAll('#appearance-preset option').length===5,'built-in presets mounted');
  d.querySelector('[data-filter="image"]').click();
@@ -73,9 +74,22 @@ let passed=0;function check(test,label){assert.ok(test,label);passed++;console.l
  check(dock.querySelector('#wc-save-btn .wc-glyph').textContent==='💾','save emoji restored');
  const saveButton=dock.querySelector('#wc-save-btn');vm.runInContext('state.clips[0].usageCount=7;renderDock()',site.context);
  check(dock.querySelector('#wc-save-btn')===saveButton,'usage statistics do not recreate dock buttons');
- site.document.getElementById('wc-settings-btn').click();await pause();check(panelOpen?.windowId===1,'dock gear opens native side panel in source window');
+ const clipButton=dock.querySelector('.wc-clip-btn');site.context.clipTrigger=clipButton;
+ vm.runInContext('showTooltip({target:clipTrigger})',site.context);
+ const tip=site.document.getElementById('wc-tooltip');check(tip.children.length===2&&tip.querySelector('time')&&!tip.querySelector('img,.wc-tooltip-preview,.wc-tooltip-meta2'),'tooltip contains only the title and updated date');
+ vm.runInContext('showContextMenu({target:clipTrigger,preventDefault(){},clientX:100})',site.context);
+ check(site.document.querySelectorAll('.wc-context-menu [role="menuitem"]').length===5&&!site.document.querySelector('.wc-context-menu [data-action="lock"],.wc-context-menu [data-action="toggle-pin"]'),'compact context menu omits Lock and Pin');
+ const contextName=vm.runInContext('state.clips.find(c=>c.id===clipTrigger.dataset.clipId).name',site.context);
+ site.document.querySelector('.wc-context-menu [data-action="rename"]').click();const contextEditor=site.document.querySelector('.wc-rename-input');contextEditor.value='Do not save';
+ const cancelRename=new site.window.Event('keydown',{bubbles:true});Object.defineProperty(cancelRename,'key',{value:'Escape'});contextEditor.dispatchEvent(cancelRename);contextEditor.dispatchEvent(new site.window.Event('blur'));
+ check(vm.runInContext('state.clips.find(c=>c.id===clipTrigger.dataset.clipId).name',site.context)===contextName,'Escape cancels context-menu rename without a blur save');
+ vm.runInContext('hideContextMenu()',site.context);
+ site.document.getElementById('wc-settings-btn').click();await pause();check(optionsOpened===1,'dock gear opens a full settings tab by default');
+ emit('settings-open-mode','sidePanel');await pause();site.document.getElementById('wc-settings-btn').click();await pause();check(panelOpen?.windowId===1,'saved side-panel preference opens the source window panel');
  site.document.getElementById('wc-library-btn').click();await pause();check(!!site.document.getElementById('wc-library-panel'),'Library opens');
  check(site.document.querySelectorAll('#wc-lib-list .wc-lib-item').length>0&&site.document.querySelectorAll('#wc-lib-list .wc-lib-item').length<20,'Library virtualizes 1,200 clips');
+ site.document.getElementById('wc-library-backup').click();check(site.document.querySelectorAll('#wc-backup-menu [role="menuitem"]').length===2,'Library offers export and import from its square header button');
+ site.document.getElementById('wc-backup-menu')._dispose();
  const search=site.document.getElementById('wc-lib-search');search.value='Node 1199';search.dispatchEvent(new site.window.Event('input'));check(site.document.querySelectorAll('#wc-lib-list .wc-lib-item').length===1,'Library search filters beyond virtual window');
  check(site.document.querySelector('#wc-lib-list .wc-lib-name').textContent.includes('1199'),'Library displays correct filtered clip');
  const lib=site.document.getElementById('wc-library-panel');vm.runInContext('refreshLibraryModal()',site.context);check(site.document.getElementById('wc-library-panel')===lib,'Library refresh retains container and search input');

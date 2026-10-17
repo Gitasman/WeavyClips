@@ -6,7 +6,7 @@ const root=path.join(__dirname,'..'),read=f=>fs.readFileSync(path.join(root,f),'
 const copy=x=>JSON.parse(JSON.stringify(x));
 const clip=(id,extra={})=>({id,name:id,type:'text',content:'hello',versions:[],pinned:true,sortOrder:0,...extra});
 function setup(initial=[clip('a')]){
- const store={clips:copy(initial),clipsRevision:0},clients=[];let listener,writes=0,fail=false;
+ const store={clips:copy(initial),clipsRevision:0,settings:{settingsSchemaVersion:8},factorySeedVersion:1},clients=[];let listener,writes=0,fail=false;
  const context=vm.createContext({console,setTimeout,clearTimeout,queueMicrotask,crypto:require('node:crypto').webcrypto,navigator:{userAgent:'Linux'},chrome:{storage:{local:{async get(){return copy(store)},async set(values){if(fail){fail=false;throw Error('Disk full')}writes++;Object.assign(store,copy(values));clients.forEach(c=>c.receive(copy(store.clips),store.clipsRevision));}}},runtime:{id:'test',onMessage:{addListener(fn){listener=fn}},onInstalled:{addListener(){}}},sidePanel:{setPanelBehavior:async()=>{}},tabs:{query:async()=>[]}}});
  context.importScripts=f=>vm.runInContext(read(f),context);
  if(fs.existsSync(path.join(root,'clips.js')))vm.runInContext(read('clips.js'),context);

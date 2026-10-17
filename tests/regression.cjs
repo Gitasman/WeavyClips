@@ -37,7 +37,7 @@ const base={matchMedia:()=>({matches:false}),queueMicrotask,ResizeObserver:class
 const worker=vm.createContext({...base,navigator:{userAgent:'Linux'},chrome:{sidePanel:{setPanelBehavior:async()=>{},open:async()=>{}},storage,runtime:{id:'test',onMessage:{addListener(fn){workerListener=fn}},onInstalled:{addListener(){}}},action:{onClicked:{addListener(){}}},tabs:{query:async()=>[]}}});
 worker.importScripts=file=>vm.runInContext(read(file),worker);vm.runInContext(read('background.js'),worker);
 function clientChrome(){return {storage,runtime:{id:'test',getManifest:()=>JSON.parse(read('manifest.json')),onMessage:{addListener(){}},sendMessage(msg){return new Promise(resolve=>workerListener(clone(msg),{id:'test'},resolve))}},tabs:{query(_,cb){cb([])}}}}
-function context(doc){const c=vm.createContext({...base,document:doc,chrome:clientChrome(),requestAnimationFrame:fn=>fn(),location:{origin:'https://app.weavy.ai',pathname:'/test/project'},navigator:{},window:{innerWidth:1280,innerHeight:900,addEventListener(){}}});vm.runInContext(read('appearance.js'),c);vm.runInContext(read('clips.js'),c);vm.runInContext(read('ui.js'),c);return c}
+function context(doc){const c=vm.createContext({...base,document:doc,chrome:clientChrome(),requestAnimationFrame:fn=>fn(),location:{origin:'https://app.weavy.ai',pathname:'/test/project'},navigator:{},window:{innerWidth:1280,innerHeight:900,addEventListener(){}}});vm.runInContext(read('appearance.js'),c);vm.runInContext(read('factory.js'),c);vm.runInContext(read('clips.js'),c);vm.runInContext(read('backup.js'),c);vm.runInContext(read('ui.js'),c);return c}
 (async()=>{
  const doc=documentFixture(),options=context(doc);
  vm.runInContext(read('options.js').replace(/\ninit\(\);\s*$/,'\n'),options);
@@ -77,7 +77,7 @@ function context(doc){const c=vm.createContext({...base,document:doc,chrome:clie
  await Promise.all([vm.runInContext("patchSettings({bgColor:'#123456'})",worker),vm.runInContext("patchSettings({dockLeft:'50px'})",worker)]);
  check(store.settings.bgColor==='#123456'&&store.settings.dockLeft==='50px','concurrent worker patches preserve unrelated changes');
  failNext=true;input('border-radius',3);await sleep(30);check(doc.getElementById('settings-save-status').textContent.includes('failed'),'write failure visible');input('border-radius',4);await drain();check(store.settings.borderRadius===4,'queue retries after failure with latest value');
- const invalid=A.normalize({borderRadius:NaN,dockShadow:null,bgColor:'url(bad)',accentColor:'red',settingsPatternSpacing:0,dockOpacity:-10});check(invalid.borderRadius===11&&invalid.dockShadow===13&&invalid.bgColor==='#1e1e1e'&&invalid.settingsPatternSpacing===8&&invalid.dockOpacity===0,'invalid imported appearance is sanitized');
+ const invalid=A.normalize({borderRadius:NaN,dockShadow:null,bgColor:'url(bad)',accentColor:'red',settingsPatternSpacing:0,dockOpacity:-10});check(invalid.borderRadius===11&&invalid.dockShadow===41&&invalid.bgColor==='#1e1e1e'&&invalid.settingsPatternSpacing===8&&invalid.dockOpacity===0,'invalid imported appearance is sanitized');
  const backup=clone(store.settings);const normalized=A.normalize(backup);check(normalized.dockLeft===backup.dockLeft&&normalized.borderRadius===backup.borderRadius,'normalization preserves saved unrelated settings');
  const html=read('options.html');const headers=[...html.matchAll(/<h2>([^<]+)<\/h2>/g)].map(m=>m[1]);check(headers.at(-2).includes('Clipboard'),'Clipboard section is penultimate');
  check((html.match(/data-version/g)||[]).length===2&&!html.includes('<h1>'),'compact version labels at top and bottom');
@@ -88,7 +88,7 @@ function context(doc){const c=vm.createContext({...base,document:doc,chrome:clie
  check(dock.style['--wc-border-width']==='0px','outline completely off at zero width');
  input('dock-border-color','#ff6600');input('dock-border-opacity',100);input('dock-border-width',3);await drain();
  check(dock.style['--wc-border-color']==='rgba(255, 102, 0, 1)'&&dock.style['--wc-border-width']==='3px','outline color, thickness and opacity');
- check(A.defaults.accentColor==='#ffffff'&&A.defaults.bgColor==='#1e1e1e'&&A.defaults.borderRadius===11&&A.defaults.dockBlur===7&&Math.round(A.defaults.dockShadow/48*100)===27&&A.defaults.settingsPatternSpacing===16,'screenshot defaults');
+ check(A.defaults.accentColor==='#ffffff'&&A.defaults.bgColor==='#1e1e1e'&&A.defaults.borderRadius===11&&A.defaults.dockBlur===5&&A.defaults.dockOpacity===0&&A.defaults.dockShadow===41&&A.defaults.settingsPatternSpacing===16,'current backup appearance defaults');
  check(A.presets.length===4&&A.presets.every(p=>A.keys.every(k=>k in p.values)),'four complete built-in presets');
  const created=await vm.runInContext("mutatePreset({operation:'create',name:'Ocean',values:{accentColor:'#00ccff'}})",worker);
  check(created.selectedId.startsWith('custom-')&&store.appearancePresets[0].values.accentColor==='#00ccff','create custom preset');
@@ -103,7 +103,7 @@ function context(doc){const c=vm.createContext({...base,document:doc,chrome:clie
  check(A.sanitizePresets([{id:'builtin-default',name:'Fake',values:{}},{id:'custom-good',name:'Valid',values:{bgColor:'invalid'}}]).length===1,'invalid preset ids rejected');
  const range=options.WeavyUI.virtualRange(10000,500000,500,150);check(range.end-range.start<15&&range.start>3000,'large lists render only a bounded window');
  check(options.WeavyUI.virtualRange(0,1000,500,150).end===0,'empty virtual list range');
- const headings=[...read('options.html').matchAll(/<h2>([^<]+)<\/h2>/g)].map(m=>m[1]);check(headings[0].includes('Appearance')&&headings[1].includes('Settings Page')&&headings[2].includes('Clips Manager'),'Appearance, Settings Page, Clips Manager order');
+ const headings=[...read('options.html').matchAll(/<h2>([^<]+)<\/h2>/g)].map(m=>m[1]);check(headings[0].includes('Backup')&&headings[1].includes('Appearance')&&headings[2].includes('Settings Page')&&headings[3].includes('Clips Manager'),'Backup, Appearance, Settings Page, Clips Manager order');
  check(manifest.side_panel.default_path==='options.html'&&manifest.minimum_chrome_version==='116','native side panel declared');
  console.log(`\n${passed} checks passed. Real JS, mocked Chrome transport/DOM; no live-browser claim.`);
 })().catch(e=>{console.error(e);process.exitCode=1});
