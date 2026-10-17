@@ -2,7 +2,7 @@
 
 **English** · [Русский](README-RU.md)
 
-**v2.4.0 · Chrome 116+ · app.weavy.ai**
+**v2.4.1 · Chrome 116+ · app.weavy.ai**
 
 Save clipboard content and reusable Weavy clips, then paste them from a compact floating dock.
 
@@ -29,6 +29,16 @@ Keep the extracted folder after installation. **No Node.js, npm or build step is
 4. Click **Reload** for Weavy Clips in `chrome://extensions`, refresh **all** open Weavy tabs and reopen settings.
 
 Do not remove the extension or load a different folder: a different path can create a different extension ID and separate local storage. GitHub installations do not update automatically.
+
+## What changed in 2.4.1
+
+- Fix popup stacking: context menus and tooltips now appear above the dock and Library.
+- Replace the Library backup popover with separate, direct **Import** and **Export** header buttons.
+- Compact Library rows show only the clip icon, name, updated date and actions. Type badges, payload previews, thumbnails and usage/history counters are removed from the list.
+- Make Clips Manager similarly compact. Use the 🏷️ action to edit a group when needed.
+- Reduce settings spacing and control heights, and put section navigation on one horizontally scrollable line.
+- Keep virtual row heights aligned with the compact desktop/narrow layouts, skip empty image-observer work and reuse one date formatter per page.
+- Add regression checks for backup-button actions, group editing and popup layer ordering.
 
 ## What changed in 2.4.0
 
@@ -90,7 +100,7 @@ Blur is visible only through a partly transparent background. At 100% opacity th
 
 **Default, Glass, Solid and Compact** presets include both dock and settings-page appearance. Choose a preset to apply it. **Apply** reapplies it after manual edits. **Save new**, **Update** and **Delete** manage personal presets; built-in presets are protected. Resets affect appearance only. Existing saved preferences are preserved through updates.
 
-The top header/navigation has an opaque sticky background. Sections can be collapsed. Optional dock auto-hide and Alt+1…9 quick paste are disabled by default. Animations respect reduced-motion preferences. Lists render a bounded window; image preview sources are assigned near the viewport. The complete stored library is still loaded into memory.
+The top header/navigation has an opaque sticky background. Sections can be collapsed. Optional dock auto-hide and Alt+1…9 quick paste are disabled by default. Animations respect reduced-motion preferences. Lists render a bounded window; list rows do not render or decode image previews. Clip payloads remain intact in storage and exports; the complete stored library is still loaded into memory.
 
 ## Backup, data and permissions
 

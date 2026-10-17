@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.4.1 — 2026-10-17
+
+- Restore popup/tooltip stacking above the dock and Library.
+- Replace the combined Library backup popover with direct Import and Export buttons.
+- Compact Library and Clips Manager rows to icon, name, updated date and actions; remove list payload previews and type badges.
+- Make group editing an on-demand action and reduce settings/control/navigation spacing.
+- Align virtual row sizes with compact responsive layouts, skip empty image observers and cache date formatting.
+- Test direct backup actions, group editing, invalid dates and popup layer ordering.
+
 ## 2.4.0 — 2026-10-17
 
 - Apply the current factory appearance and centralize shared default settings.

@@ -5,7 +5,7 @@
       if(!await before())throw Error('Save pending changes before exporting');
       const data=await chrome.storage.local.get(['clips','settings','appearancePresets']);
       const blob=new Blob([JSON.stringify({schemaVersion:3,clips:data.clips||[],settings:data.settings||{},appearancePresets:data.appearancePresets||[],exportedAt:Date.now()},null,2)],{type:'application/json'});
-      const a=document.createElement('a'),url=URL.createObjectURL(blob);a.href=url;a.download=`weavy-clips-v2-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);report('Backup exported');return true;
+      const a=document.createElement('a'),url=URL.createObjectURL(blob);a.href=url;a.download=`weavy-clips-v2-backup-${new Date().toISOString().slice(0,10)}.json`;a.hidden=true;a.addEventListener('click',event=>event.stopPropagation());document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);report('Backup exported');return true;
     }catch(error){report('Export failed: '+error.message);return false;}
   }
   async function importFile(file,{before=async()=>true,report=()=>{}}={}){

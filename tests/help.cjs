@@ -31,3 +31,6 @@ test('search never reads image payloads and stops at the result limit',()=>{
  const u=ui(),clip={name:'Photo',type:'image',get content(){throw Error('Image content must not be indexed')}};
  assert.equal(u.searchClips([clip],'photo').length,1);assert.equal(u.searchClips(Array.from({length:1000},(_,i)=>({name:'Node '+i})), 'node',60).length,60);
 });
+test('clip dates handle unknown and invalid timestamps without breaking a row',()=>{
+ const u=ui();assert.equal(u.formatDate(0),'—');assert.equal(u.formatDate(NaN),'—');assert.equal(u.formatDate(1e40),'—');assert.notEqual(u.formatDate(1750000000000),'—');
+});

@@ -3,6 +3,8 @@
   const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   const escape = value => String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const searchCache=new WeakMap();
+  const dateFormatter=new Intl.DateTimeFormat(undefined,{dateStyle:'short',timeStyle:'short'});
+  function formatDate(timestamp){const n=Number(timestamp),date=new Date(n);return n>0&&Number.isFinite(date.getTime())?dateFormatter.format(date):'—';}
   const fold=value=>String(value??'').normalize('NFKD').replace(/\p{M}/gu,'').toLowerCase();
   function searchClips(items,query,limit=Infinity){
     const words=fold(query).trim().split(/\s+/).filter(Boolean),matches=[];
@@ -25,6 +27,7 @@
     root._wcImageObserver?.disconnect();
     const fill=img=>{const url=resolve(img.dataset.clipImage);if(typeof url==='string' && /^data:image\/(png|jpe?g|webp|gif|avif|bmp);base64,/i.test(url))img.src=url;};
     const images=[...root.querySelectorAll('img[data-clip-image]')];
+    if(!images.length){root._wcImageObserver=null;return;}
     if(!('IntersectionObserver' in globalThis)){images.forEach(fill);return;}
     const observer=new IntersectionObserver(entries=>{entries.forEach(entry=>{if(entry.isIntersecting){fill(entry.target);observer.unobserve(entry.target);}});},{root,rootMargin:'100px'});
     root._wcImageObserver=observer;
@@ -82,5 +85,5 @@
     dialog.addEventListener('cancel',e=>{e.preventDefault();close()});dialog.querySelector('.wc-palette-head button').onclick=close;
     dialog.addEventListener('click',e=>{if(e.target===dialog)close()});dialog.showModal();render();input.focus();return dialog;
   }
-  globalThis.WeavyUI={VirtualList,virtualRange,lazyImages,positions,animatePositions,palette,escape,searchClips};
+  globalThis.WeavyUI={VirtualList,virtualRange,lazyImages,positions,animatePositions,palette,escape,searchClips,formatDate};
 })();

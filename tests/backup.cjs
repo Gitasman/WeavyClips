@@ -22,3 +22,12 @@ test('import rejects oversized or malformed files before sending data to the wor
 test('validated imports reach the shared worker action',async()=>{
  const s=setup();assert.equal(await s.api.importFile({size:100,text:async()=>JSON.stringify({schemaVersion:3,clips:s.stored.clips})}),true);assert.equal(s.sends,1);
 });
+test('popup and tooltip layers stay above the dock and Library',()=>{
+ // LinkeDOM's CSS parser predates container queries; these do not set layers.
+ let css=read('content.css'),start;
+ while((start=css.indexOf('@container'))!==-1){let end=css.indexOf('{',start),depth=1;for(end++;end<css.length&&depth;end++){if(css[end]==='{')depth++;if(css[end]==='}')depth--;}css=css.slice(0,start)+css.slice(end);}
+ const {document}=parseHTML('<html><head><style></style></head><body><div id="wc-dock"></div><div class="wc-context-menu"></div><div id="wc-tooltip"></div></body></html>');
+ const style=document.querySelector('style');style.textContent=css;
+ function layer(selector){const el=document.querySelector(selector);let value=0;for(const rule of style.sheet.cssRules){if(!rule.selectorText||!rule.style?.getPropertyValue('z-index'))continue;if(el.matches(rule.selectorText))value=Number(rule.style.getPropertyValue('z-index'));}return value;}
+ assert.ok(layer('.wc-context-menu')>Math.max(layer('#wc-dock'),999998));assert.ok(layer('#wc-tooltip')>layer('#wc-dock'));
+});

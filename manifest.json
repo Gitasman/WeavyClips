@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Weavy Clips",
-  "version": "2.4.0",
+  "version": "2.4.1",
   "description": "Clipboard and reusable clip manager for Weavy",
   "permissions": [
     "clipboardRead",

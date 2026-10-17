@@ -101,7 +101,7 @@ async function drainSettings() {
   } finally { savingSettings = false; }
 }
 function esc(v=''){ const d=document.createElement('div'); d.textContent=String(v); return d.innerHTML; }
-function fmt(ts){ return ts ? new Date(ts).toLocaleString([], {dateStyle:'short',timeStyle:'short'}) : '—'; }
+function fmt(ts){return WeavyUI.formatDate(ts);}
 function preview(content){ const s=typeof content==='string'?content:JSON.stringify(content); return (s||'').slice(0,120).replace(/\s+/g,' '); }
 function dataUrlToBlob(dataUrl){ const [meta,b64]=dataUrl.split(','); const mime=(meta.match(/data:([^;]+)/)||[])[1]||'image/png'; const bytes=atob(b64); const a=new Uint8Array(bytes.length); for(let i=0;i<bytes.length;i++)a[i]=bytes.charCodeAt(i); return new Blob([a],{type:mime}); }
 function ensureVersions(c){ if(!Array.isArray(c.versions)) c.versions=[]; return c.versions; }
@@ -143,33 +143,28 @@ let clipsView=null,clipsRenderFrame=0;
 function scheduleClipsRender(){if(!clipsRenderFrame)clipsRenderFrame=requestAnimationFrame(()=>{clipsRenderFrame=0;renderClipsList()});}
 function renderClipsList(){
   const root=document.getElementById('clips-list');
-  if(!clipsView)clipsView=new WeavyUI.VirtualList(root,{rowHeight:()=>root.clientWidth<300?228:root.clientWidth<620?184:142,render:clipRowMarkup,bind:bindClipRows,image:id=>state.clips.find(c=>c.id===id)?.content,empty:'No matching clips. Save a clip in Weavy to get started.'});
+  if(!clipsView)clipsView=new WeavyUI.VirtualList(root,{rowHeight:()=>root.clientWidth<620?92:64,render:clipRowMarkup,bind:bindClipRows,empty:'No matching clips. Save a clip in Weavy to get started.'});
   const filtered=getFilteredClips();
   clipsView.set(filtered);
   const count=document.getElementById('clips-count');if(count)count.textContent=`${filtered.length} / ${state.clips.length} clips`;
 }
 function clipRowMarkup(c){return `<div class="clip-item ${c.locked?'locked':''}" draggable="true" data-clip-id="${esc(c.id)}">
-    <button class="clip-icon-btn" data-icon-for="${esc(c.id)}" title="Change icon"><span class="wc-glyph">${esc(c.icon||'📦')}</span></button>
-    <div class="clip-info">
-      <div class="clip-title-row"><span class="clip-name-text" data-name-for="${esc(c.id)}">${esc(c.name)}</span>${c.pinned?'<span title="Pinned">📌</span>':''}${c.locked?'<span title="Locked">🔒</span>':''}<span class="clip-badge">${esc(c.type)}</span></div>
-      <div class="clip-meta">${fmt(c.updatedAt||c.createdAt)} · Used ${c.usageCount||0} · ${c.versions.length} old${c.group?` · Group: ${esc(c.group)}`:''}</div>
-      <div class="clip-preview">${c.type==='image'?`<img class="wc-image-thumbnail" data-clip-image="${esc(c.id)}" alt="Image clip preview" loading="lazy" decoding="async">`:esc(preview(c.content))}</div>
-      <div class="clip-extra"><input data-group-for="${esc(c.id)}" value="${esc(c.group||'')}" placeholder="Group"></div>
-    </div>
+    <button type="button" class="clip-icon-btn" data-icon-for="${esc(c.id)}" title="Change icon"><span class="wc-glyph">${esc(c.icon||'📦')}</span></button>
+    <div class="clip-info"><div class="clip-title-row"><button type="button" class="clip-name-text" data-name-for="${esc(c.id)}" title="Rename clip">${esc(c.name)}</button></div><div class="clip-meta">${fmt(c.updatedAt||c.createdAt)}${c.group?` · ${esc(c.group)}`:''}</div></div>
     <div class="clip-actions">
-      <button class="btn-icon ${c.pinned?'active':''}" data-action="pin" data-id="${esc(c.id)}" title="${c.pinned?'Unpin · hide from dock':'Pin · show on dock'}">${c.pinned?'📌':'📍'}</button>
-      <button class="btn-icon ${c.locked?'active':''}" data-action="lock" data-id="${esc(c.id)}" title="${c.locked?'Unlock · allow updates and deletion':'Lock · protect content and deletion'}">${c.locked?'🔒':'🔓'}</button>
-      <button class="btn-icon" data-action="copy" data-id="${esc(c.id)}" title="Copy">📋</button>
-      <button class="btn-icon" data-action="update" data-id="${esc(c.id)}" title="Update">🔄</button>
-      <button class="btn-icon" data-action="history" data-id="${esc(c.id)}" title="Version history">🕘</button>
-      <button class="btn-icon" data-action="delete" data-id="${esc(c.id)}" title="Delete">🗑️</button>
+      <button type="button" class="btn-icon ${c.pinned?'active':''}" data-action="pin" data-id="${esc(c.id)}" title="${c.pinned?'Unpin · hide from dock':'Pin · show on dock'}">${c.pinned?'📌':'📍'}</button>
+      <button type="button" class="btn-icon ${c.locked?'active':''}" data-action="lock" data-id="${esc(c.id)}" title="${c.locked?'Unlock · allow updates and deletion':'Lock · protect content and deletion'}">${c.locked?'🔒':'🔓'}</button>
+      <button type="button" class="btn-icon" data-action="group" data-id="${esc(c.id)}" title="Edit group">🏷️</button>
+      <button type="button" class="btn-icon" data-action="copy" data-id="${esc(c.id)}" title="Copy">📋</button>
+      <button type="button" class="btn-icon" data-action="update" data-id="${esc(c.id)}" title="Update">🔄</button>
+      <button type="button" class="btn-icon" data-action="history" data-id="${esc(c.id)}" title="Version history">🕘</button>
+      <button type="button" class="btn-icon clip-delete" data-action="delete" data-id="${esc(c.id)}" title="Delete">🗑️</button>
     </div></div>`;}
 function bindClipRows(root){
   root.querySelectorAll('.btn-icon').forEach(button=>{if(!button.children.length){const span=document.createElement('span');span.className='wc-glyph';span.textContent=button.textContent;button.textContent='';button.appendChild(span);}});
   root.querySelectorAll('[data-name-for]').forEach(el=>el.onclick=()=>startRename(el.dataset.nameFor,el));
   root.querySelectorAll('[data-icon-for]').forEach(el=>el.onclick=e=>openIconPicker(el.dataset.iconFor,el,e));
-  root.querySelectorAll('[data-group-for]').forEach(el=>el.onchange=()=>{const c=state.clips.find(x=>x.id===el.dataset.groupFor); if(c){c.group=el.value.trim();saveClips();renderClipsList();}});
-  root.querySelectorAll('[data-action]').forEach(b=>b.onclick=handleClipAction);
+  root.querySelectorAll('[data-action]').forEach(b=>{b.onclick=handleClipAction;b.setAttribute('aria-label',b.title)});
 
   root.querySelectorAll('.clip-item').forEach(row=>{
     row.addEventListener('dragstart',e=>{if(e.target.closest('input,button')){e.preventDefault();return;}row.classList.add('wc-dragging');state.draggedId=row.dataset.clipId;e.dataTransfer.setData('text/plain',state.draggedId)});
@@ -181,16 +176,17 @@ function bindClipRows(root){
     row.addEventListener('dragend',()=>{row.classList.remove('wc-dragging');state.draggedId=null;root.querySelectorAll('.clip-drop-target').forEach(el=>el.classList.remove('clip-drop-target'));clipsView.draw()});
   });
 }
-function startRename(id,el){
+function startRename(id,el,field='name'){
   const c=state.clips.find(x=>x.id===id);if(!c)return;
-  const input=document.createElement('input');input.className='search-input';input.value=c.name;input.setAttribute('aria-label','Clip name');el.replaceWith(input);input.focus();input.select();
+  const input=document.createElement('input');input.className='search-input clip-inline-editor';input.value=c[field]||'';input.setAttribute('aria-label',field==='name'?'Clip name':'Clip group');el.replaceWith(input);input.focus();input.select();
   let finished=false;
-  const done=(cancel=false)=>{if(finished)return;finished=true;const current=state.clips.find(x=>x.id===id),v=input.value.trim();if(!cancel&&current&&v){current.name=v;saveClips();}input.remove();renderClipsList();};
+  const done=(cancel=false)=>{if(finished)return;finished=true;const current=state.clips.find(x=>x.id===id),v=input.value.trim();if(!cancel&&current&&(v||field==='group')){current[field]=v.slice(0,300);saveClips();}input.remove();renderClipsList();};
   input.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();done()}if(e.key==='Escape'){e.preventDefault();done(true)}};input.onblur=()=>done();
 }
 function openIconPicker(id,anchor,e){ e.stopPropagation(); document.getElementById('icon-picker')?.remove(); const c=state.clips.find(x=>x.id===id);if(!c)return; const p=document.createElement('div');p.id='icon-picker';p.style.cssText='position:fixed;z-index:12000;background:#2a2a31;border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:10px;width:260px;box-shadow:0 8px 30px rgba(0,0,0,.4)';p.innerHTML=`<div style="display:grid;grid-template-columns:repeat(8,1fr);gap:6px">${PRESET_ICONS.map(i=>`<button data-i="${i}" class="btn-icon">${i}</button>`).join('')}</div><input id="custom-icon" class="search-input" style="width:100%;margin-top:9px" maxlength="8" placeholder="Emoji or short text">`;document.body.appendChild(p);const r=anchor.getBoundingClientRect();const left=Math.min(innerWidth-p.offsetWidth-8,Math.max(8,r.left));const top=r.bottom+8+p.offsetHeight>innerHeight?Math.max(8,r.top-p.offsetHeight-8):r.bottom+8;p.style.left=left+'px';p.style.top=top+'px'; p.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{c.icon=b.dataset.i;saveClips(true);p.remove();renderClipsList()});const ci=p.querySelector('#custom-icon');ci.onkeydown=ev=>{if(ev.key==='Enter'&&ci.value.trim()){c.icon=ci.value.trim();saveClips(true);p.remove();renderClipsList()}};setTimeout(()=>document.addEventListener('click',function close(ev){if(!p.contains(ev.target)){p.remove();document.removeEventListener('click',close)}}, {once:false}),0); }
 
 async function handleClipAction(e){ const c=state.clips.find(x=>x.id===e.currentTarget.dataset.id);const a=e.currentTarget.dataset.action;if(!c)return;
+  if(a==='group'){startRename(c.id,e.currentTarget.closest('.clip-item').querySelector('.clip-meta'),'group');return;}
   if(a==='pin'){c.pinned=!c.pinned;saveClips(true);renderClipsList();notify(c.pinned?'Pinned':'Unpinned');}
   if(a==='lock'){c.locked=!c.locked;saveClips(true);renderClipsList();notify(c.locked?'Clip locked':'Clip unlocked');}
   if(a==='copy'){try{if(c.type==='image'){const b=dataUrlToBlob(c.content);await navigator.clipboard.write([new ClipboardItem({[b.type||'image/png']:b})])}else await navigator.clipboard.writeText(String(c.content));notify('Copied')}catch{notify('Copy failed')}}

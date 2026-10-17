@@ -187,10 +187,7 @@ function getClipPreview(content) {
   return str.slice(0, 100).replace(/\n/g, ' ');
 }
 
-function formatDate(timestamp) {
-  const date = new Date(timestamp);
-  return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
+function formatDate(timestamp){return WeavyUI.formatDate(timestamp);}
 
 let clipRenderFrame=0;
 function scheduleClipRender(){if(!clipRenderFrame)clipRenderFrame=requestAnimationFrame(()=>{clipRenderFrame=0;renderDock();if(state.libraryModal)refreshLibraryModal()});}
@@ -887,7 +884,7 @@ function showTooltip(e){
   if(!tooltip){tooltip=document.createElement('div');tooltip.id='wc-tooltip';tooltip.className='wc-tooltip';tooltip.setAttribute('role','tooltip');document.body.appendChild(tooltip);}
   const title=document.createElement('div');title.className='wc-tooltip-name';title.textContent=clip.name;
   const time=document.createElement('time');time.className='wc-tooltip-date';const stamp=Number(clip.updatedAt||clip.createdAt);
-  if(Number.isFinite(stamp)&&stamp>0){time.textContent=formatDate(stamp);time.setAttribute('datetime',new Date(stamp).toISOString());}else time.textContent='—';
+  if(stamp>0&&Number.isFinite(new Date(stamp).getTime())){time.textContent=formatDate(stamp);time.setAttribute('datetime',new Date(stamp).toISOString());}else time.textContent='—';
   tooltip.replaceChildren(title,time);btn.setAttribute('aria-describedby','wc-tooltip');
   const r=btn.getBoundingClientRect();tooltip.style.transform='none';tooltip.style.bottom='auto';
   const size=tooltip.getBoundingClientRect(),margin=8;
@@ -994,26 +991,19 @@ function openLibraryModal(focusClipId = null) {
   panel.style.bottom = openAbove ? `${window.innerHeight - dockRect.top + 8}px` : 'auto';
   state.libraryModal = panel;
 
-  panel.innerHTML=`<div class="wc-lib-header"><span id="wc-library-count" style="font-weight:600;font-size:14px">🗂 Library</span><div class="wc-lib-header-actions"><button id="wc-library-backup" class="wc-lib-header-btn" title="Import or export backup" aria-label="Import or export backup" aria-expanded="false">⇅</button><button id="wc-library-reset" class="wc-lib-header-btn" title="Reset dock position" aria-label="Reset dock position">↺</button><button id="wc-library-close" class="wc-lib-header-btn" aria-label="Close">×</button></div></div><input class="wc-lib-search" id="wc-lib-search" placeholder="Search clips… (Alt+K for quick search)" value="${escapeHtml(state.librarySearch)}"><div id="wc-lib-list"></div>`;
+  panel.innerHTML=`<div class="wc-lib-header"><span id="wc-library-count" style="font-weight:600;font-size:14px">🗂 Library</span><div class="wc-lib-header-actions"><button type="button" id="wc-library-import" class="wc-lib-header-btn" title="Import JSON backup" aria-label="Import JSON backup"><span class="wc-glyph" aria-hidden="true">📥</span></button><button type="button" id="wc-library-export" class="wc-lib-header-btn" title="Export JSON backup" aria-label="Export JSON backup"><span class="wc-glyph" aria-hidden="true">📤</span></button><button id="wc-library-reset" class="wc-lib-header-btn" title="Reset dock position" aria-label="Reset dock position">↺</button><button id="wc-library-close" class="wc-lib-header-btn" aria-label="Close">×</button></div></div><input class="wc-lib-search" id="wc-lib-search" placeholder="Search clips… (Alt+K for quick search)" value="${escapeHtml(state.librarySearch)}"><div id="wc-lib-list"></div>`;
   const root=panel.querySelector('#wc-lib-list');
-  const renderRow=clip=>`<div class="wc-lib-item ${clip.locked?'wc-lib-lock':''}" draggable="true" data-clip-id="${escapeHtml(clip.id)}" title="Drag to reorder">
-        <div class="wc-lib-top-row">
-          <div class="wc-lib-name" data-clip-id="${escapeHtml(clip.id)}">${escapeHtml(clip.name)} ${clip.pinned?'📌':''} ${clip.locked?'🔒':''}</div>
-          <div class="wc-lib-meta-row"><span class="wc-lib-type" style="background:var(--wc-accent);color:var(--wc-on-accent);">${clip.type}</span><span>${formatDate(clip.updatedAt||clip.createdAt)}${(clip.versions?.length||0)?` • ${clip.versions.length} old`:''}</span></div>
-        </div>
-        <div class="wc-lib-content-row">
-          <button class="wc-lib-icon-btn" draggable="false" data-clip-id="${escapeHtml(clip.id)}" title="Change icon"><span class="wc-glyph">${escapeHtml(clip.icon||'📦')}</span></button>
-          <div class="wc-lib-preview">${clip.type==='image'?`<img class="wc-image-thumbnail" data-clip-image="${escapeHtml(clip.id)}" alt="Image clip preview" loading="lazy" decoding="async">`:escapeHtml(getClipPreview(clip.content))}${clip.group?`<div style="font-size:10px;opacity:.55;margin-top:2px">${escapeHtml(clip.group)}</div>`:''}</div>
-          <div class="wc-lib-actions">
-            <button class="wc-lib-action" data-action="copy" data-clip-id="${escapeHtml(clip.id)}" title="Copy">📋</button>
-            <button class="wc-lib-action" data-action="update" data-clip-id="${escapeHtml(clip.id)}" title="Update">🔄</button>
-            <button class="wc-lib-action" data-action="history" data-clip-id="${escapeHtml(clip.id)}" title="Version history">🕘</button>
-            <button class="wc-lib-action" data-action="lock" data-clip-id="${escapeHtml(clip.id)}" title="${clip.locked?'Unlock · allow updates and deletion':'Lock · protect content and deletion'}">${clip.locked?'🔒':'🔓'}</button>
-            <button class="wc-lib-action" data-action="toggle-pin" data-clip-id="${escapeHtml(clip.id)}" title="${clip.pinned?'Unpin · hide from dock':'Pin · show on dock'}">${clip.pinned?'📌':'📍'}</button>
-            <button class="wc-lib-action wc-lib-delete" data-action="delete" data-clip-id="${escapeHtml(clip.id)}" title="Delete">🗑️</button>
-          </div>
-        </div>
-      </div>`;
+  const renderRow=clip=>`<div class="wc-lib-item ${clip.locked?'wc-lib-lock':''}" draggable="true" data-clip-id="${escapeHtml(clip.id)}">
+    <button type="button" class="wc-lib-icon-btn" draggable="false" data-clip-id="${escapeHtml(clip.id)}" title="Change icon" aria-label="Change clip icon"><span class="wc-glyph">${escapeHtml(clip.icon||'📦')}</span></button>
+    <div class="wc-lib-info"><button type="button" class="wc-lib-name" data-clip-id="${escapeHtml(clip.id)}" title="Rename clip">${escapeHtml(clip.name)}</button><time class="wc-lib-date">${formatDate(clip.updatedAt||clip.createdAt)}</time></div>
+    <div class="wc-lib-actions">
+      <button type="button" class="wc-lib-action" data-action="copy" data-clip-id="${escapeHtml(clip.id)}" title="Copy clip" aria-label="Copy clip">📋</button>
+      <button type="button" class="wc-lib-action" data-action="update" data-clip-id="${escapeHtml(clip.id)}" title="Update from clipboard" aria-label="Update from clipboard">🔄</button>
+      <button type="button" class="wc-lib-action" data-action="history" data-clip-id="${escapeHtml(clip.id)}" title="Version history" aria-label="Version history">🕘</button>
+      <button type="button" class="wc-lib-action" data-action="lock" data-clip-id="${escapeHtml(clip.id)}" aria-pressed="${!!clip.locked}" title="${clip.locked?'Unlock · allow updates and deletion':'Lock · protect content and deletion'}" aria-label="${clip.locked?'Unlock clip':'Lock clip'}">${clip.locked?'🔒':'🔓'}</button>
+      <button type="button" class="wc-lib-action" data-action="toggle-pin" data-clip-id="${escapeHtml(clip.id)}" aria-pressed="${!!clip.pinned}" title="${clip.pinned?'Unpin · hide from dock':'Pin · show on dock'}" aria-label="${clip.pinned?'Unpin clip':'Pin clip'}">${clip.pinned?'📌':'📍'}</button>
+      <button type="button" class="wc-lib-action wc-lib-delete" data-action="delete" data-clip-id="${escapeHtml(clip.id)}" title="Delete clip" aria-label="Delete clip">🗑️</button>
+    </div></div>`;
   const bindRows=root=>{
     root.querySelectorAll('.wc-lib-action').forEach(btn => { if(btn.dataset.action==='update')btn.addEventListener('mousedown',ev=>ev.preventDefault()); btn.addEventListener('click',handleLibraryAction); });
     const items=[...root.querySelectorAll('.wc-lib-item')]; attachClipReorderListeners(items);
@@ -1024,14 +1014,14 @@ function openLibraryModal(focusClipId = null) {
     }));
     root.querySelectorAll('.wc-lib-name').forEach(nameEl=>nameEl.addEventListener('click',ev=>{
       ev.stopPropagation(); const clip=state.clips.find(c=>c.id===nameEl.dataset.clipId); if(!clip)return;
-      const input=document.createElement('input'); input.value=clip.name; input.style.cssText='width:100%;background:rgba(255,255,255,.08);border:1px solid '+state.settings.accentColor+';border-radius:5px;color:#fff;padding:3px 6px'; nameEl.replaceWith(input);input.focus();input.select();
-      let finished=false;const done=()=>{if(finished)return;finished=true;const v=input.value.trim();if(v)clip.name=v;saveClips(true);renderDock();renderList();}; input.addEventListener('keydown',e=>{if(e.key==='Enter')done();if(e.key==='Escape'){finished=true;renderList()}});input.addEventListener('blur',done);
+      const input=document.createElement('input'); input.value=clip.name; input.className='wc-lib-rename';input.setAttribute('aria-label','Clip name'); nameEl.replaceWith(input);input.focus();input.select();
+      let finished=false;const done=(cancel=false)=>{if(finished)return;finished=true;const v=input.value.trim();if(!cancel&&v){clip.name=v;saveClips(true);renderDock();}input.remove();renderList();};input.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key==='Escape'){e.preventDefault();e.stopPropagation();done(e.key==='Escape')}});input.addEventListener('blur',()=>done());
     }));
     root.querySelectorAll('.wc-lib-icon-btn').forEach(btn=>btn.addEventListener('click',ev=>{ev.stopPropagation();openLibraryIconPicker(btn.dataset.clipId,btn,renderList);}));
 
     root.querySelectorAll('.wc-lib-action,.wc-lib-icon-btn').forEach(button=>{if(!button.children.length){const glyph=document.createElement('span');glyph.className='wc-glyph';glyph.textContent=button.textContent;button.textContent='';button.appendChild(glyph);}});
   };
-  const list=new WeavyUI.VirtualList(root,{rowHeight:134,render:renderRow,bind:bindRows,image:id=>state.clips.find(c=>c.id===id)?.content});
+  const list=new WeavyUI.VirtualList(root,{rowHeight:()=>root.clientWidth<340?92:64,render:renderRow,bind:bindRows});
   panel._virtualList=list;
   const renderList=()=>{
     const before=WeavyUI.positions(root,'.wc-lib-item');
@@ -1042,25 +1032,13 @@ function openLibraryModal(focusClipId = null) {
     if(focusClipId){const index=filtered.findIndex(c=>c.id===focusClipId);if(index>=0)list.scrollToIndex(index);focusClipId=null;}
   };
   panel._refresh=focus=>{focusClipId=focus;renderList()};
-  panel.querySelector('#wc-library-backup').onclick=event=>{event.stopPropagation();openLibraryBackupMenu(event.currentTarget)};
+  panel.querySelector('#wc-library-import').onclick=event=>{event.stopPropagation();WeavyBackup.chooseFile({before:()=>clipStore.flush(),report:showToast});};
+  panel.querySelector('#wc-library-export').onclick=event=>{event.stopPropagation();WeavyBackup.exportFile({before:()=>clipStore.flush(),report:showToast});};
   panel.querySelector('#wc-library-close').onclick=closeLibraryModal;
   panel.querySelector('#wc-library-reset').onclick=e=>{e.stopPropagation();resetDockPosition();closeLibraryModal()};
   panel.querySelector('#wc-lib-search').oninput=e=>{state.librarySearch=e.target.value;root.scrollTop=0;renderList()};
   renderList();
-  setTimeout(()=>document.addEventListener('click',function outside(ev){if(!panel.isConnected){document.removeEventListener('click',outside);return;}if(!panel.contains(ev.target)&&!ev.target.closest('#wc-library-btn,#wc-icon-picker,#wc-backup-menu,.wc-history-overlay,#wc-command-palette')){closeLibraryModal();document.removeEventListener('click',outside);}},false),0);
-}
-
-function openLibraryBackupMenu(anchor){
-  const existing=document.getElementById('wc-backup-menu');if(existing){existing._dispose();return;}
-  const menu=document.createElement('div');menu.id='wc-backup-menu';menu.className='wc-context-menu';menu.setAttribute('role','menu');menu.setAttribute('aria-label','Backup');
-  menu.innerHTML='<button type="button" role="menuitem" class="wc-context-item" data-backup="export"><span class="wc-menu-glyph">📤</span>Export JSON</button><button type="button" role="menuitem" class="wc-context-item" data-backup="import"><span class="wc-menu-glyph">📥</span>Import JSON</button>';
-  document.body.appendChild(menu);anchor.setAttribute('aria-expanded','true');
-  const r=anchor.getBoundingClientRect(),m=menu.getBoundingClientRect();menu.style.left=Math.max(8,Math.min(r.right-m.width,innerWidth-m.width-8))+'px';menu.style.top=Math.max(8,Math.min(r.bottom+6,innerHeight-m.height-8))+'px';
-  const close=()=>{menu.remove();document.removeEventListener('click',outside);anchor.setAttribute('aria-expanded','false');};
-  const outside=event=>{if(!menu.contains(event.target)&&!anchor.contains(event.target))close()};document.addEventListener('click',outside);menu._dispose=close;
-  menu.onkeydown=event=>{if(event.key==='Escape'){event.preventDefault();close();anchor.focus();}if(event.key==='ArrowDown'||event.key==='ArrowUp'){event.preventDefault();const buttons=[...menu.querySelectorAll('button')],i=buttons.indexOf(document.activeElement);buttons[(i+(event.key==='ArrowDown'?1:buttons.length-1))%buttons.length].focus();}};
-  menu.querySelectorAll('[data-backup]').forEach(button=>button.onclick=()=>{close();const options={before:()=>clipStore.flush(),report:showToast};if(button.dataset.backup==='import')WeavyBackup.chooseFile(options);else WeavyBackup.exportFile(options);});
-  menu.querySelector('button').focus();
+  setTimeout(()=>document.addEventListener('click',function outside(ev){if(!panel.isConnected){document.removeEventListener('click',outside);return;}if(!panel.contains(ev.target)&&!ev.target.closest('#wc-library-btn,#wc-icon-picker,.wc-history-overlay,#wc-command-palette')){closeLibraryModal();document.removeEventListener('click',outside);}},false),0);
 }
 
 function openLibraryIconPicker(clipId, anchor, refresh) {
@@ -1074,7 +1052,6 @@ function openLibraryIconPicker(clipId, anchor, refresh) {
 
 function closeLibraryModal() {
   if (state.libraryModal) {
-    document.getElementById('wc-backup-menu')?._dispose?.();
     state.libraryModal._virtualList?.destroy();
     state.libraryModal.remove();
     state.libraryModal = null;
