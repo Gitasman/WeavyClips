@@ -55,10 +55,37 @@
     {id:'builtin-compact',name:'Compact',values:snapshot({...defaults,dockButtonSize:30,borderRadius:8,dockBlur:0,dockShadow:8,dockShadowSoftness:10,dockShadowDistance:2})}
   ]);
   const equal = (a,b) => {const x=normalize(a),y=normalize(b);return keys.every(k=>x[k]===y[k]);};
+  const icons = Object.freeze({library:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M5 6h14M5 12h14M5 18h14"/></svg>'});
+  const glyphFont = '400 18px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", system-ui';
+  const glyphOffsets = new Map();
+  let glyphContext;
+  // Center the painted glyph, rather than the font's baseline box. Emoji metrics
+  // differ between macOS, Windows and Linux; a fixed pixel nudge cannot fit all.
+  function centerGlyphs(root) {
+    const glyphs = root?.querySelectorAll('.wc-glyph');
+    if (!glyphs?.length) return;
+    if (glyphContext === undefined) {
+      try { glyphContext = document.createElement('canvas').getContext('2d'); }
+      catch { glyphContext = null; }
+    }
+    if (!glyphContext) return;
+    glyphContext.font = glyphFont;
+    for (const glyph of glyphs) {
+      const text = glyph.textContent;
+      if (!glyphOffsets.has(text)) {
+        const m = glyphContext.measureText(text);
+        const offset = (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent - m.fontBoundingBoxAscent + m.fontBoundingBoxDescent) / 2;
+        if (!Number.isFinite(offset)) continue;
+        if (glyphOffsets.size >= 256) glyphOffsets.clear();
+        glyphOffsets.set(text, Math.max(-6, Math.min(6, offset)));
+      }
+      glyph.style.setProperty('--wc-glyph-offset', glyphOffsets.get(text)+'px');
+    }
+  }
   const sanitizePresets = value => {
     if (!Array.isArray(value)) return [];
     const ids=new Set();
     return value.filter(p=>p && typeof p.id==='string' && p.id.startsWith('custom-') && !ids.has(p.id) && ids.add(p.id) && typeof p.name==='string' && p.name.trim()).map(p=>({id:p.id,name:p.name.trim().slice(0,60),values:snapshot(p.values||{})}));
   };
-  globalThis.WeavyAppearance = Object.freeze({defaults, keys, normalize, apply, foreground, rgb, snapshot, presets, equal, sanitizePresets});
+  globalThis.WeavyAppearance = Object.freeze({defaults, keys, normalize, apply, foreground, rgb, snapshot, presets, equal, sanitizePresets, icons, centerGlyphs});
 })();

@@ -33,35 +33,8 @@
   align-items: center;
 }
 
-#wc-dock button,
-#wc-dock [data-clip-id] {
-  width: 36px !important;
-  height: 36px !important;
-  min-width: 36px !important;
-  max-width: 36px !important;
-  min-height: 36px !important;
-  font-size: 16px !important;
-  line-height: 1 !important;
-  padding: 0 !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  overflow: hidden;
-  flex-shrink: 0;
-  border-radius: 8px;
-  background: rgba(255,255,255,0.06);
-  border: none;
-  cursor: pointer;
-  transition: background 0.15s ease, transform 0.15s ease;
-}
-#wc-dock button:hover,
-#wc-dock [data-clip-id]:hover {
-  background: rgba(255,255,255,0.13);
-  transform: scale(1.08);
-}
-/* Save button gets accent color */
-#wc-save-btn { background: var(--wc-accent) !important; color: #1a1a22 !important; }
-#wc-save-btn:hover { filter: brightness(1.15); transform: scale(1.08); }
+/* Visual button rules live in appearance.css, shared with the preview. */
+#wc-dock button { overflow:hidden; }
 
 .wc-clip-btn {
   background: rgba(255, 255, 255, 0.1);
@@ -446,15 +419,7 @@
   box-shadow: inset 0 -3px 0 var(--wc-accent, #faffc7);
 }
 
-/* v2 appearance + behavior overrides */
-#wc-dock button,
-#wc-dock [data-clip-id] {
-  width: var(--wc-btn-size, 36px) !important;
-  height: var(--wc-btn-size, 36px) !important;
-  min-width: var(--wc-btn-size, 36px) !important;
-  max-width: var(--wc-btn-size, 36px) !important;
-  min-height: var(--wc-btn-size, 36px) !important;
-}
+/* Dock overflow behavior; appearance comes from the shared stylesheet. */
 #wc-dock[data-overflow-mode="scroll"] #wc-clips-row {
   overflow-x: auto;
   overflow-y: hidden;

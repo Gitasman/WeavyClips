@@ -665,8 +665,8 @@ function renderDock() {
     lastGroup=group;
     return `${divider}<button class="wc-clip-btn ${clip.locked?'wc-locked':''}" draggable="true" data-clip-id="${escapeHtml(clip.id)}" title="${escapeHtml(clip.name)}${group?` · ${escapeHtml(group)}`:''}"><span class="wc-glyph">${escapeHtml(clip.icon||'📦')}</span></button>`;
   }).join('');
-  dock.innerHTML=`<div id="wc-drag-handle">⠿</div><button id="wc-save-btn" data-wc-role="save" title="Save clipboard" aria-label="Save clipboard"><span class="wc-glyph">💾</span></button><button id="wc-settings-btn" title="Settings"><span class="wc-glyph">⚙️</span></button><button id="wc-library-btn" title="Library"><span class="wc-glyph">≡</span></button><div id="wc-clips-row">${clipHtml}</div>`;
-  applyStyles();positionDock();attachDockListeners();
+  dock.innerHTML=`<div id="wc-drag-handle">⠿</div><button id="wc-save-btn" data-wc-role="save" title="Save clipboard" aria-label="Save clipboard"><span class="wc-glyph">💾</span></button><button id="wc-settings-btn" title="Settings" aria-label="Settings"><span class="wc-glyph">⚙️</span></button><button id="wc-library-btn" title="Library" aria-label="Library">${WeavyAppearance.icons.library}</button><div id="wc-clips-row">${clipHtml}</div>`;
+  applyStyles();WeavyAppearance.centerGlyphs(dock);positionDock();attachDockListeners();
   WeavyUI.animatePositions(dock,previousPositions,'.wc-clip-btn');
 }
 

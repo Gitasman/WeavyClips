@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.5.0 — 2026-10-17
+
+- Rebuild settings as focused, keyboard-accessible workspaces with remembered active navigation.
+- Group appearance controls, elevate the shared live preview and simplify backup/preset management.
+- Move library save/history preferences into Clips Manager.
+- Center native emoji using cached font metrics and replace the Library text glyph with a symmetric SVG.
+- Consolidate dock button styles and rewrite settings CSS around shared theme tokens and responsive groups.
+- Defer hidden manager rows and diagnostics work until their sections are opened.
+- Add navigation, glyph metrics, fallback and deferred-rendering coverage.
+
 ## 2.4.1 — 2026-10-17
 
 - Restore popup/tooltip stacking above the dock and Library.

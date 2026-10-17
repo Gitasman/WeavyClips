@@ -143,6 +143,7 @@ let clipsView=null,clipsRenderFrame=0;
 function scheduleClipsRender(){if(!clipsRenderFrame)clipsRenderFrame=requestAnimationFrame(()=>{clipsRenderFrame=0;renderClipsList()});}
 function renderClipsList(){
   const root=document.getElementById('clips-list');
+  if(document.getElementById('clips-section').hidden)return;
   if(!clipsView)clipsView=new WeavyUI.VirtualList(root,{rowHeight:()=>root.clientWidth<620?92:64,render:clipRowMarkup,bind:bindClipRows,empty:'No matching clips. Save a clip in Weavy to get started.'});
   const filtered=getFilteredClips();
   clipsView.set(filtered);
@@ -183,7 +184,7 @@ function startRename(id,el,field='name'){
   const done=(cancel=false)=>{if(finished)return;finished=true;const current=state.clips.find(x=>x.id===id),v=input.value.trim();if(!cancel&&current&&(v||field==='group')){current[field]=v.slice(0,300);saveClips();}input.remove();renderClipsList();};
   input.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();done()}if(e.key==='Escape'){e.preventDefault();done(true)}};input.onblur=()=>done();
 }
-function openIconPicker(id,anchor,e){ e.stopPropagation(); document.getElementById('icon-picker')?.remove(); const c=state.clips.find(x=>x.id===id);if(!c)return; const p=document.createElement('div');p.id='icon-picker';p.style.cssText='position:fixed;z-index:12000;background:#2a2a31;border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:10px;width:260px;box-shadow:0 8px 30px rgba(0,0,0,.4)';p.innerHTML=`<div style="display:grid;grid-template-columns:repeat(8,1fr);gap:6px">${PRESET_ICONS.map(i=>`<button data-i="${i}" class="btn-icon">${i}</button>`).join('')}</div><input id="custom-icon" class="search-input" style="width:100%;margin-top:9px" maxlength="8" placeholder="Emoji or short text">`;document.body.appendChild(p);const r=anchor.getBoundingClientRect();const left=Math.min(innerWidth-p.offsetWidth-8,Math.max(8,r.left));const top=r.bottom+8+p.offsetHeight>innerHeight?Math.max(8,r.top-p.offsetHeight-8):r.bottom+8;p.style.left=left+'px';p.style.top=top+'px'; p.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{c.icon=b.dataset.i;saveClips(true);p.remove();renderClipsList()});const ci=p.querySelector('#custom-icon');ci.onkeydown=ev=>{if(ev.key==='Enter'&&ci.value.trim()){c.icon=ci.value.trim();saveClips(true);p.remove();renderClipsList()}};setTimeout(()=>document.addEventListener('click',function close(ev){if(!p.contains(ev.target)){p.remove();document.removeEventListener('click',close)}}, {once:false}),0); }
+function openIconPicker(id,anchor,e){ e.stopPropagation(); document.getElementById('icon-picker')?.remove(); const c=state.clips.find(x=>x.id===id);if(!c)return; const p=document.createElement('div');p.id='icon-picker';p.className='icon-picker';p.innerHTML=`<div style="display:grid;grid-template-columns:repeat(8,1fr);gap:6px">${PRESET_ICONS.map(i=>`<button data-i="${i}" class="btn-icon">${i}</button>`).join('')}</div><input id="custom-icon" class="search-input" style="width:100%;margin-top:9px" maxlength="8" placeholder="Emoji or short text">`;document.body.appendChild(p);const r=anchor.getBoundingClientRect();const left=Math.min(innerWidth-p.offsetWidth-8,Math.max(8,r.left));const top=r.bottom+8+p.offsetHeight>innerHeight?Math.max(8,r.top-p.offsetHeight-8):r.bottom+8;p.style.left=left+'px';p.style.top=top+'px'; p.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{c.icon=b.dataset.i;saveClips(true);p.remove();renderClipsList()});const ci=p.querySelector('#custom-icon');ci.onkeydown=ev=>{if(ev.key==='Enter'&&ci.value.trim()){c.icon=ci.value.trim();saveClips(true);p.remove();renderClipsList()}};setTimeout(()=>document.addEventListener('click',function close(ev){if(!p.contains(ev.target)){p.remove();document.removeEventListener('click',close)}}, {once:false}),0); }
 
 async function handleClipAction(e){ const c=state.clips.find(x=>x.id===e.currentTarget.dataset.id);const a=e.currentTarget.dataset.action;if(!c)return;
   if(a==='group'){startRename(c.id,e.currentTarget.closest('.clip-item').querySelector('.clip-meta'),'group');return;}
@@ -235,23 +236,63 @@ async function persistPreset(operation){
 }
 function openQuickFind(){WeavyUI.palette({clips:()=>getFilteredClipsForPalette(),onChoose:async clip=>{try{if(clip.type==='image'){const b=dataUrlToBlob(clip.content);await navigator.clipboard.write([new ClipboardItem({[b.type]:b})])}else await navigator.clipboard.writeText(String(clip.content));notify('Copied · paste into Weavy')}catch{notify('Could not copy clip')}}});}
 function getFilteredClipsForPalette(){return [...state.clips].sort((a,b)=>a.sortOrder-b.sortOrder);}
-function initNavigation(collapsed){
-  const nav=document.getElementById('settings-nav');
-  const layoutObserver=new ResizeObserver(()=>{updateTopbarOffset();updatePreviewAlignment()});
-  layoutObserver.observe(document.querySelector('.container'));
-  layoutObserver.observe(document.querySelector('.settings-topbar'));
-  document.querySelectorAll('.container > section').forEach((section,index)=>{
-    if(!section.id)section.id='settings-section-'+index;
-    const heading=section.querySelector('h2'),title=heading.textContent.replace(/^\S+\s/,''),header=heading.closest('.section-head')||heading;
-    const button=document.createElement('button');button.className='section-toggle';button.type='button';button.textContent=heading.textContent;heading.textContent='';heading.appendChild(button);
-    const body=document.createElement('div');body.className='section-body';body.id=section.id+'-body';
-    while(header.nextSibling)body.appendChild(header.nextSibling);section.appendChild(body);
-    const setClosed=closed=>{body.hidden=closed;button.setAttribute('aria-expanded',String(!closed));collapsed[section.id]=closed;updatePreviewAlignment()};
-    button.setAttribute('aria-controls',body.id);setClosed(!!collapsed[section.id]);
-    button.onclick=()=>{setClosed(!body.hidden);chrome.storage.local.set({collapsedSections:collapsed});};
-    const link=document.createElement('button');link.type='button';link.textContent=title;link.onclick=()=>{setClosed(false);section.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});};nav.appendChild(link);
+let activeSettingsSection = '';
+function initNavigation(savedSection) {
+  const nav = document.getElementById('settings-nav');
+  const sections = [...document.querySelectorAll('.container > section')];
+  const tabs = [];
+  nav.setAttribute('role','tablist');
+  const activate = (id, remember = true) => {
+    const section = sections.find(el => el.id === id) || sections[0];
+    if (!section) return;
+    activeSettingsSection = section.id;
+    sections.forEach(el => { el.hidden = el !== section; });
+    tabs.forEach(tab => {
+      const selected = tab.getAttribute('aria-controls') === section.id;
+      tab.setAttribute('aria-selected',String(selected));
+      tab.tabIndex = selected ? 0 : -1;
+    });
+    if (remember) {
+      chrome.storage.local.set({activeSettingsSection:section.id});
+      section.scrollIntoView({block:'start',behavior:'auto'});
+    }
+    refreshActiveSection();
+    updatePreviewAlignment();
+  };
+  sections.forEach((section,index) => {
+    if (!section.id) section.id = 'settings-section-'+index;
+    const heading = section.querySelector('h2');
+    heading.id = section.id+'-title';
+    section.setAttribute('role','tabpanel');
+    section.setAttribute('aria-labelledby','settings-tab-'+index);
+    section.tabIndex = 0;
+    const tab = document.createElement('button');
+    tab.type = 'button';tab.id = 'settings-tab-'+index;
+    tab.textContent = heading.textContent;
+    tab.setAttribute('role','tab');tab.setAttribute('aria-controls',section.id);
+    tab.onclick = () => activate(section.id);
+    tab.onkeydown = e => {
+      let next;
+      if (e.key === 'ArrowRight') next = (index+1)%sections.length;
+      if (e.key === 'ArrowLeft') next = (index+sections.length-1)%sections.length;
+      if (e.key === 'Home') next = 0;
+      if (e.key === 'End') next = sections.length-1;
+      if (next === undefined) return;
+      e.preventDefault();activate(sections[next].id);tabs[next].focus();
+      tabs[next].scrollIntoView({block:'nearest',inline:'nearest'});
+    };
+    nav.appendChild(tab);tabs.push(tab);
   });
+  activate(savedSection,false);
+  const observer = new ResizeObserver(() => {updateTopbarOffset();updatePreviewAlignment();updatePositionPreview()});
+  observer.observe(document.querySelector('.container'));
+  observer.observe(document.querySelector('.settings-topbar'));
   updateTopbarOffset();
+}
+function refreshActiveSection() {
+  if (activeSettingsSection === 'clips-section') renderClipsList();
+  if (activeSettingsSection === 'dock-position-section') {updatePositionPreview();refreshCurrentPosition();}
+  if (activeSettingsSection === 'diagnostics-section') refreshDiagnostics();
 }
 function updateTopbarOffset(){
   const bar=document.querySelector('.settings-topbar');
@@ -276,10 +317,11 @@ function renderSettings(){
   check('show-delete-confirm',s.showDeleteConfirm);check('capture-selection-before-save',s.captureSelectionBeforeSave);check('verify-selection-copy',s.verifySelectionCopy);check('smart-allow-debugger',s.smartAllowDebugger);check('restore-clipboard-after-debugger',s.restoreClipboardAfterDebuggerPaste);check('quick-paste-enabled',s.quickPasteEnabled);
   document.querySelectorAll('[name="capture-selection-method"]').forEach(r=>r.checked=r.value===s.captureSelectionMethod);document.querySelectorAll('[name="paste-method"]').forEach(r=>r.checked=r.value===s.pasteMethod);document.querySelectorAll('[name="site-mode"]').forEach(r=>r.checked=r.value===s.siteMode);
   set('duplicate-behavior',s.duplicateBehavior);set('max-versions',s.maxVersions);document.getElementById('capture-method-setting').classList.toggle('disabled',!s.captureSelectionBeforeSave);
+  document.querySelectorAll('#capture-method-setting input').forEach(input=>input.disabled=!s.captureSelectionBeforeSave);
   set('default-dock-h-anchor',s.defaultDockHorizontalAnchor);set('default-dock-x',s.defaultDockHorizontalOffset);set('default-dock-v-anchor',s.defaultDockVerticalAnchor);set('default-dock-y',s.defaultDockVerticalOffset);
-  set('dock-overflow-mode',s.dockOverflowMode);set('dock-max-width',s.dockMaxWidth);check('clamp-dock',s.clampDock);check('snap-dock',s.snapDock);check('per-project-position',s.perProjectPosition);check('show-drag-guides',s.showDragGuides);
+  set('dock-overflow-mode',s.dockOverflowMode);document.getElementById('dock-max-width').disabled=s.dockOverflowMode!=='scroll';set('dock-max-width',s.dockMaxWidth);check('clamp-dock',s.clampDock);check('snap-dock',s.snapDock);check('per-project-position',s.perProjectPosition);check('show-drag-guides',s.showDragGuides);
   renderExtraAppearance();renderPresets();
-  updateAppearancePreview();updatePageAppearance();updatePositionPreview();refreshCurrentPosition();refreshDiagnostics();
+  updateAppearancePreview();updatePageAppearance();updatePositionPreview();refreshActiveSection();
 }
 const PAGE_FIELDS = {
   'settings-bg-color':'settingsBgColor', 'settings-panel-color':'settingsPanelColor',
@@ -308,7 +350,9 @@ function updatePageAppearance() {
 }
 function updateAppearancePreview() {
   const s = state.settings;
-  WeavyAppearance.apply(document.getElementById('dock-preview-box'),s);
+  const preview = document.getElementById('dock-preview-box');
+  WeavyAppearance.apply(preview,s);
+  WeavyAppearance.centerGlyphs(preview);
   document.getElementById('blur-help').textContent = s.dockBlur > 0 && s.dockOpacity === 100
     ? 'Blur is enabled but hidden by the opaque background. Try 65–85% background opacity.'
     : 'Blur softens content behind the dock. Background opacity never fades buttons or text.';
@@ -361,7 +405,7 @@ function attachListeners(){
   bindSetting('show-delete-confirm','showDeleteConfirm','checked');bindSetting('capture-selection-before-save','captureSelectionBeforeSave','checked',()=>renderSettings());bindSetting('verify-selection-copy','verifySelectionCopy','checked');bindSetting('smart-allow-debugger','smartAllowDebugger','checked');bindSetting('restore-clipboard-after-debugger','restoreClipboardAfterDebuggerPaste','checked');bindSetting('quick-paste-enabled','quickPasteEnabled','checked');
   document.querySelectorAll('[name="capture-selection-method"]').forEach(r=>r.onchange=()=>{if(r.checked){state.settings.captureSelectionMethod=r.value;saveSettings()}});document.querySelectorAll('[name="paste-method"]').forEach(r=>r.onchange=()=>{if(r.checked){state.settings.pasteMethod=r.value;saveSettings()}});document.querySelectorAll('[name="site-mode"]').forEach(r=>r.onchange=()=>{if(r.checked){state.settings.siteMode=r.value;saveSettings()}});
   bindSetting('duplicate-behavior','duplicateBehavior');bindSetting('max-versions','maxVersions');
-  [['default-dock-h-anchor','defaultDockHorizontalAnchor'],['default-dock-v-anchor','defaultDockVerticalAnchor'],['dock-overflow-mode','dockOverflowMode']].forEach(([id,k])=>bindSetting(id,k,'value',()=>{updatePositionPreview()}));
+  [['default-dock-h-anchor','defaultDockHorizontalAnchor'],['default-dock-v-anchor','defaultDockVerticalAnchor'],['dock-overflow-mode','dockOverflowMode']].forEach(([id,k])=>bindSetting(id,k,'value',()=>{document.getElementById('dock-max-width').disabled=state.settings.dockOverflowMode!=='scroll';updatePositionPreview()}));
   [['default-dock-x','defaultDockHorizontalOffset'],['default-dock-y','defaultDockVerticalOffset'],['dock-max-width','dockMaxWidth']].forEach(([id,k])=>bindSetting(id,k,'value',()=>{updatePositionPreview()}));
   bindSetting('clamp-dock','clampDock','checked');bindSetting('snap-dock','snapDock','checked');bindSetting('per-project-position','perProjectPosition','checked');bindSetting('show-drag-guides','showDragGuides','checked');
   document.querySelectorAll('.nudge-btn').forEach(b=>b.onclick=()=>nudge(b.dataset.target,b.dataset.dir));
@@ -423,8 +467,8 @@ async function refreshDiagnostics(){const root=document.getElementById('diagnost
 function formatBytes(n){if(n<1024)return n+' B';if(n<1048576)return (n/1024).toFixed(1)+' KB';return (n/1048576).toFixed(2)+' MB'}
 async function copyDiagnostics(){await refreshDiagnostics();const text=[...document.querySelectorAll('.diag-row')].map(r=>`${r.children[0].textContent}: ${r.children[1].textContent}`).join('\n');await navigator.clipboard.writeText(text);notify('Diagnostics copied')}
 function notify(message,undo){document.querySelector('.toast')?.remove();const t=document.createElement('div');t.className='toast';t.setAttribute('role','status');const text=document.createElement('span');text.textContent=message;t.appendChild(text);if(undo){const button=document.createElement('button');button.textContent='Undo';button.onclick=()=>{undo();t.remove()};t.appendChild(button)}document.body.appendChild(t);setTimeout(()=>t.remove(),undo?6000:2200)}
-function renderUI(){renderClipsList();renderSettings()}
-async function init(){await chrome.runtime.sendMessage({action:'initializeDefaults'});chrome.storage.local.get(['clips','clipsRevision','settings','appearancePresets','collapsedSections'],r=>{state.clips=r.clips||[];clipStore.reset(state.clips,r.clipsRevision);customPresets=WeavyAppearance.sanitizePresets(r.appearancePresets);state.settings=normalizeSettings(r.settings||{});settingsSnapshot={...state.settings};document.querySelectorAll('[data-version]').forEach(el=>el.textContent='v'+chrome.runtime.getManifest().version);normalizeClips();renderUI();attachListeners();initNavigation(r.collapsedSections||{});updatePreviewAlignment()})}
+function renderUI(){renderSettings()}
+async function init(){await chrome.runtime.sendMessage({action:'initializeDefaults'});chrome.storage.local.get(['clips','clipsRevision','settings','appearancePresets','activeSettingsSection'],r=>{state.clips=r.clips||[];clipStore.reset(state.clips,r.clipsRevision);customPresets=WeavyAppearance.sanitizePresets(r.appearancePresets);state.settings=normalizeSettings(r.settings||{});settingsSnapshot={...state.settings};document.querySelectorAll('[data-version]').forEach(el=>el.textContent='v'+chrome.runtime.getManifest().version);normalizeClips();renderUI();attachListeners();initNavigation(r.activeSettingsSection);updatePreviewAlignment()})}
 chrome.storage.onChanged.addListener((ch,area)=>{
   if(area !== 'local') return;
   if(ch.appearancePresets){customPresets=WeavyAppearance.sanitizePresets(ch.appearancePresets.newValue);renderPresets()}

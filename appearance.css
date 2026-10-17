@@ -16,8 +16,10 @@
   width: var(--wc-btn-size, 36px) !important; height: var(--wc-btn-size, 36px) !important;
   min-width: var(--wc-btn-size, 36px) !important; max-width: var(--wc-btn-size, 36px) !important;
   min-height: var(--wc-btn-size, 36px) !important;
+  max-height: var(--wc-btn-size, 36px) !important;
   display: inline-flex; justify-content: center; align-items: center; flex-shrink: 0;
-  padding: 0; font: 16px/1 system-ui; cursor: pointer;
+  padding: 0; margin:0; text-indent:0; letter-spacing:normal; text-transform:none;
+  appearance:none; vertical-align:middle; font: 16px/1 system-ui; cursor: pointer;
   box-shadow: none;
   border: 0; border-radius: var(--wc-button-radius, 8px);
   background: color-mix(in srgb, var(--wc-on-bg, #fff) 7%, transparent);
@@ -45,12 +47,18 @@
 :is(#wc-dock, #dock-preview-box)[data-accent-mode="strong"] button:hover {
   background: var(--wc-accent) !important; color: var(--wc-on-accent) !important;
 }
-:is(#wc-dock, #dock-preview-box) svg {width:18px;height:18px;pointer-events:none}
+:is(#wc-dock, #dock-preview-box) svg {display:block;width:18px;height:18px;flex:none;margin:0;pointer-events:none}
 #wc-drag-handle {color:inherit;opacity:.55}
 @media (prefers-reduced-motion: reduce) {
   :is(#wc-dock, #dock-preview-box) button {transition:none!important}
   :is(#wc-dock, #dock-preview-box) button:hover {transform:none}
 }
 
-/* Emoji glyphs are optically centered separately from the button hit target. */
-:is(#wc-dock, #dock-preview-box) .wc-glyph {display:block;line-height:1;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",system-ui;transform:translateY(-1px);pointer-events:none}
+/* Same font and line box as centerGlyphs(), isolated from host span styles. */
+:is(#wc-dock, #dock-preview-box) .wc-glyph {
+  box-sizing:content-box;display:block;position:static;flex:none;
+  width:auto;min-width:20px;height:20px;margin:0;padding:0;border:0;
+  font:400 18px/20px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",system-ui;
+  letter-spacing:normal;text-align:center;text-indent:0;text-transform:none;
+  transform:translateY(var(--wc-glyph-offset,0px));pointer-events:none;
+}
