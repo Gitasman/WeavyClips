@@ -13,6 +13,7 @@ class Element {
  set value(v){this._value=String(v)}get value(){return this._value}
  addEventListener(name,fn){(this.listeners[name]??=[]).push(fn)}
  dispatch(name){for(const fn of this.listeners[name]||[])fn({target:this});this['on'+name]?.({target:this})}
+ setAttribute(k,v){this[k]=String(v)}
  querySelectorAll(){return []}querySelector(){return null}appendChild(){}remove(){}
  matches(){return false}contains(){return false}
  getBoundingClientRect(){return {left:20,top:100,right:260,bottom:152,width:240,height:52}}
@@ -36,7 +37,7 @@ const base={matchMedia:()=>({matches:false}),queueMicrotask,ResizeObserver:class
 const worker=vm.createContext({...base,navigator:{userAgent:'Linux'},chrome:{sidePanel:{setPanelBehavior:async()=>{},open:async()=>{}},storage,runtime:{id:'test',onMessage:{addListener(fn){workerListener=fn}},onInstalled:{addListener(){}}},action:{onClicked:{addListener(){}}},tabs:{query:async()=>[]}}});
 worker.importScripts=file=>vm.runInContext(read(file),worker);vm.runInContext(read('background.js'),worker);
 function clientChrome(){return {storage,runtime:{id:'test',getManifest:()=>JSON.parse(read('manifest.json')),onMessage:{addListener(){}},sendMessage(msg){return new Promise(resolve=>workerListener(clone(msg),{id:'test'},resolve))}},tabs:{query(_,cb){cb([])}}}}
-function context(doc){const c=vm.createContext({...base,document:doc,chrome:clientChrome(),requestAnimationFrame:fn=>fn(),location:{origin:'https://app.weavy.ai',pathname:'/test/project'},navigator:{},window:{innerWidth:1280,innerHeight:900,addEventListener(){}}});vm.runInContext(read('appearance.js'),c);vm.runInContext(read('ui.js'),c);return c}
+function context(doc){const c=vm.createContext({...base,document:doc,chrome:clientChrome(),requestAnimationFrame:fn=>fn(),location:{origin:'https://app.weavy.ai',pathname:'/test/project'},navigator:{},window:{innerWidth:1280,innerHeight:900,addEventListener(){}}});vm.runInContext(read('appearance.js'),c);vm.runInContext(read('clips.js'),c);vm.runInContext(read('ui.js'),c);return c}
 (async()=>{
  const doc=documentFixture(),options=context(doc);
  vm.runInContext(read('options.js').replace(/\ninit\(\);\s*$/,'\n'),options);

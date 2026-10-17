@@ -11,7 +11,7 @@
 <body>
   <div class="container">
     <div class="settings-topbar">
-      <header class="compact-header"><span>Weavy Clips <span data-version></span> · MOSAIC design</span><button id="quick-find-btn" class="btn-ghost" title="Search clips (Alt+K)">⌕ Search</button><span id="settings-save-status" role="status" aria-live="polite">All changes saved</span></header>
+      <header class="compact-header"><span>Weavy Clips <span data-version></span> · MOSAIC design</span><a class="help-link" href="help.html" target="_blank" rel="noopener">Help</a><button id="quick-find-btn" class="btn-ghost" title="Search clips (Alt+K)">⌕ Search</button><span id="settings-save-status" role="status" aria-live="polite">All changes saved</span><span id="clips-save-status" role="status" hidden></span><button id="retry-clips-btn" class="btn-ghost" hidden>Retry clip save</button></header>
       <nav id="settings-nav" aria-label="Settings sections"></nav>
     </div>
 
@@ -79,6 +79,7 @@
         <h2>🗂 Clips Manager</h2>
         <input id="clips-search" class="search-input" type="search" placeholder="Search clips…" autocomplete="off">
       </div>
+      <div class="clips-toolbar"><div id="clip-filters" class="clip-filters" aria-label="Filter clips"><button data-filter="all" aria-pressed="true">All</button><button data-filter="pinned" aria-pressed="false">Pinned</button><button data-filter="image" aria-pressed="false">Images</button><button data-filter="text" aria-pressed="false">Text</button><button data-filter="json" aria-pressed="false">JSON</button></div><span id="clips-count" role="status"></span></div>
       <div id="clips-list" class="clips-list"></div>
     </section>
 
@@ -196,6 +197,7 @@
     <footer>Weavy Clips <span data-version></span> · MOSAIC design</footer>
   </div>
   <script src="appearance.js"></script>
+  <script src="clips.js"></script>
   <script src="ui.js"></script>
   <script src="options.js"></script>
 </body>

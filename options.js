@@ -15,8 +15,12 @@ const DEFAULT_SETTINGS = {
   ...WeavyAppearance.defaults, dockAutoHide: false
 };
 
-let state = { clips: [], settings: { ...DEFAULT_SETTINGS }, search: '' };
-let saveTimer = null;
+let state = { clips: [], settings: { ...DEFAULT_SETTINGS }, search: '', filter: 'all' };
+const clipStore=new WeavyClips.Client({get:()=>state.clips,set:clips=>{state.clips=clips;scheduleClipsRender()},status:(status)=>{
+  const label=document.getElementById('clips-save-status'),retry=document.getElementById('retry-clips-btn');
+  if(label){label.hidden=status!=='error';label.textContent='Clips could not be saved';}
+  if(retry)retry.hidden=status!=='error';
+}});
 const PRESET_ICONS = ['📦','🔥','⚡','🎨','🖼','📝','✨','🎯','💡','🔷','⭐','🚀','🎬','❤️','💎','🌊'];
 
 function normalizeSettings(raw = {}) {
@@ -76,9 +80,7 @@ function normalizeClips() {
 }
 
 function saveClips(immediate=false) {
-  clearTimeout(saveTimer);
-  const run = () => chrome.storage.local.set({ clips: state.clips });
-  if (immediate) run(); else saveTimer = setTimeout(run, 120);
+  return clipStore.save(immediate);
 }
 let settingsSnapshot = {};
 let acknowledgedRevision = 0;
@@ -145,29 +147,35 @@ async function updateClipFromClipboard(clip){
 }
 function restoreVersion(clip,v){ if(clip.locked)return false; const current=snapshot(clip); clip.versions.push(current); trimVersions(clip); clip.type=v.type; clip.content=v.content; clip.updatedAt=Date.now(); saveClips(true); return true; }
 
-function getFilteredClips(){ const q=state.search.trim().toLowerCase(); const ordered=[...state.clips].sort((a,b)=>a.sortOrder-b.sortOrder); if(!q)return ordered; return ordered.filter(c=>[c.name,c.group,c.type,preview(c.content)].join(' ').toLowerCase().includes(q)); }
+function getFilteredClips(){
+  const ordered=[...state.clips].sort((a,b)=>a.sortOrder-b.sortOrder);
+  return WeavyUI.searchClips(ordered,state.search).filter(c=>state.filter==='all'||(state.filter==='pinned'?c.pinned:c.type===state.filter));
+}
 
-let clipsView=null;
+let clipsView=null,clipsRenderFrame=0;
+function scheduleClipsRender(){if(!clipsRenderFrame)clipsRenderFrame=requestAnimationFrame(()=>{clipsRenderFrame=0;renderClipsList()});}
 function renderClipsList(){
   const root=document.getElementById('clips-list');
   if(!clipsView)clipsView=new WeavyUI.VirtualList(root,{rowHeight:()=>root.clientWidth<300?228:root.clientWidth<620?184:142,render:clipRowMarkup,bind:bindClipRows,image:id=>state.clips.find(c=>c.id===id)?.content,empty:'No matching clips. Save a clip in Weavy to get started.'});
-  clipsView.set(getFilteredClips());
+  const filtered=getFilteredClips();
+  clipsView.set(filtered);
+  const count=document.getElementById('clips-count');if(count)count.textContent=`${filtered.length} / ${state.clips.length} clips`;
 }
 function clipRowMarkup(c){return `<div class="clip-item ${c.locked?'locked':''}" draggable="true" data-clip-id="${esc(c.id)}">
-    <button class="clip-icon-btn" data-icon-for="${c.id}" title="Change icon"><span class="wc-glyph">${esc(c.icon||'📦')}</span></button>
+    <button class="clip-icon-btn" data-icon-for="${esc(c.id)}" title="Change icon"><span class="wc-glyph">${esc(c.icon||'📦')}</span></button>
     <div class="clip-info">
-      <div class="clip-title-row"><span class="clip-name-text" data-name-for="${c.id}">${esc(c.name)}</span>${c.pinned?'<span title="Pinned">📌</span>':''}${c.locked?'<span title="Locked">🔒</span>':''}<span class="clip-badge">${esc(c.type)}</span></div>
+      <div class="clip-title-row"><span class="clip-name-text" data-name-for="${esc(c.id)}">${esc(c.name)}</span>${c.pinned?'<span title="Pinned">📌</span>':''}${c.locked?'<span title="Locked">🔒</span>':''}<span class="clip-badge">${esc(c.type)}</span></div>
       <div class="clip-meta">${fmt(c.updatedAt||c.createdAt)} · Used ${c.usageCount||0} · ${c.versions.length} old${c.group?` · Group: ${esc(c.group)}`:''}</div>
       <div class="clip-preview">${c.type==='image'?`<img class="wc-image-thumbnail" data-clip-image="${esc(c.id)}" alt="Image clip preview" loading="lazy" decoding="async">`:esc(preview(c.content))}</div>
-      <div class="clip-extra"><input data-group-for="${c.id}" value="${esc(c.group||'')}" placeholder="Group"></div>
+      <div class="clip-extra"><input data-group-for="${esc(c.id)}" value="${esc(c.group||'')}" placeholder="Group"></div>
     </div>
     <div class="clip-actions">
-      <button class="btn-icon ${c.pinned?'active':''}" data-action="pin" data-id="${c.id}" title="${c.pinned?'Unpin':'Pin'}">${c.pinned?'📌':'📍'}</button>
-      <button class="btn-icon ${c.locked?'active':''}" data-action="lock" data-id="${c.id}" title="${c.locked?'Unlock':'Lock'}">${c.locked?'🔒':'🔓'}</button>
-      <button class="btn-icon" data-action="copy" data-id="${c.id}" title="Copy">📋</button>
-      <button class="btn-icon" data-action="update" data-id="${c.id}" title="Update">🔄</button>
-      <button class="btn-icon" data-action="history" data-id="${c.id}" title="Version history">🕘</button>
-      <button class="btn-icon" data-action="delete" data-id="${c.id}" title="Delete">🗑️</button>
+      <button class="btn-icon ${c.pinned?'active':''}" data-action="pin" data-id="${esc(c.id)}" title="${c.pinned?'Unpin':'Pin'}">${c.pinned?'📌':'📍'}</button>
+      <button class="btn-icon ${c.locked?'active':''}" data-action="lock" data-id="${esc(c.id)}" title="${c.locked?'Unlock':'Lock'}">${c.locked?'🔒':'🔓'}</button>
+      <button class="btn-icon" data-action="copy" data-id="${esc(c.id)}" title="Copy">📋</button>
+      <button class="btn-icon" data-action="update" data-id="${esc(c.id)}" title="Update">🔄</button>
+      <button class="btn-icon" data-action="history" data-id="${esc(c.id)}" title="Version history">🕘</button>
+      <button class="btn-icon" data-action="delete" data-id="${esc(c.id)}" title="Delete">🗑️</button>
     </div></div>`;}
 function bindClipRows(root){
   root.querySelectorAll('.btn-icon').forEach(button=>{if(!button.children.length){const span=document.createElement('span');span.className='wc-glyph';span.textContent=button.textContent;button.textContent='';button.appendChild(span);}});
@@ -186,7 +194,13 @@ function bindClipRows(root){
     row.addEventListener('dragend',()=>{row.classList.remove('wc-dragging');state.draggedId=null;root.querySelectorAll('.clip-drop-target').forEach(el=>el.classList.remove('clip-drop-target'));clipsView.draw()});
   });
 }
-function startRename(id,el){ const c=state.clips.find(x=>x.id===id); if(!c)return; const input=document.createElement('input'); input.className='search-input'; input.value=c.name; el.replaceWith(input); input.focus();input.select(); const done=()=>{const v=input.value.trim();if(v)c.name=v;saveClips();renderClipsList()}; input.onkeydown=e=>{if(e.key==='Enter')done();if(e.key==='Escape')renderClipsList()};input.onblur=done; }
+function startRename(id,el){
+  const c=state.clips.find(x=>x.id===id);if(!c)return;
+  const input=document.createElement('input');input.className='search-input';input.value=c.name;input.setAttribute('aria-label','Clip name');el.replaceWith(input);input.focus();input.select();
+  let finished=false;
+  const done=(cancel=false)=>{if(finished)return;finished=true;const current=state.clips.find(x=>x.id===id),v=input.value.trim();if(!cancel&&current&&v){current.name=v;saveClips();}input.remove();renderClipsList();};
+  input.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();done()}if(e.key==='Escape'){e.preventDefault();done(true)}};input.onblur=()=>done();
+}
 function openIconPicker(id,anchor,e){ e.stopPropagation(); document.getElementById('icon-picker')?.remove(); const c=state.clips.find(x=>x.id===id);if(!c)return; const p=document.createElement('div');p.id='icon-picker';p.style.cssText='position:fixed;z-index:12000;background:#2a2a31;border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:10px;width:260px;box-shadow:0 8px 30px rgba(0,0,0,.4)';p.innerHTML=`<div style="display:grid;grid-template-columns:repeat(8,1fr);gap:6px">${PRESET_ICONS.map(i=>`<button data-i="${i}" class="btn-icon">${i}</button>`).join('')}</div><input id="custom-icon" class="search-input" style="width:100%;margin-top:9px" maxlength="8" placeholder="Emoji or short text">`;document.body.appendChild(p);const r=anchor.getBoundingClientRect();const left=Math.min(innerWidth-p.offsetWidth-8,Math.max(8,r.left));const top=r.bottom+8+p.offsetHeight>innerHeight?Math.max(8,r.top-p.offsetHeight-8):r.bottom+8;p.style.left=left+'px';p.style.top=top+'px'; p.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{c.icon=b.dataset.i;saveClips(true);p.remove();renderClipsList()});const ci=p.querySelector('#custom-icon');ci.onkeydown=ev=>{if(ev.key==='Enter'&&ci.value.trim()){c.icon=ci.value.trim();saveClips(true);p.remove();renderClipsList()}};setTimeout(()=>document.addEventListener('click',function close(ev){if(!p.contains(ev.target)){p.remove();document.removeEventListener('click',close)}}, {once:false}),0); }
 
 async function handleClipAction(e){ const c=state.clips.find(x=>x.id===e.currentTarget.dataset.id);const a=e.currentTarget.dataset.action;if(!c)return;
@@ -195,10 +209,10 @@ async function handleClipAction(e){ const c=state.clips.find(x=>x.id===e.current
   if(a==='copy'){try{if(c.type==='image'){const b=dataUrlToBlob(c.content);await navigator.clipboard.write([new ClipboardItem({[b.type||'image/png']:b})])}else await navigator.clipboard.writeText(String(c.content));notify('Copied')}catch{notify('Copy failed')}}
   if(a==='update'){if(c.locked){notify('Unlock clip before updating');return;}try{const changed=await updateClipFromClipboard(c);renderClipsList();notify(changed?'Clip updated':'No content change')}catch(err){notify(err.message||'Update failed')}}
   if(a==='history')openHistory(c);
-  if(a==='delete'){if(c.locked){notify('Unlock clip before deleting');return;}if(state.settings.showDeleteConfirm&&!confirm(`Delete "${c.name}"?`))return;const idx=state.clips.indexOf(c);state.clips.splice(idx,1);saveClips(true);renderClipsList();notify('Clip deleted');}
+  if(a==='delete'){if(c.locked){notify('Unlock clip before deleting');return;}if(state.settings.showDeleteConfirm&&!confirm(`Delete "${c.name}"?`))return;const idx=state.clips.indexOf(c);state.clips.splice(idx,1);saveClips(true);renderClipsList();notify('Clip deleted',()=>{if(state.clips.some(x=>x.id===c.id))return;state.clips.splice(Math.min(idx,state.clips.length),0,c);state.clips.forEach((item,i)=>item.sortOrder=i);saveClips(true);renderClipsList();});}
 }
 
-function openHistory(c){ document.getElementById('clip-history-overlay')?.remove(); const versions=[...ensureVersions(c)].sort((a,b)=>b.savedAt-a.savedAt); const o=document.createElement('div');o.id='clip-history-overlay';o.className='history-overlay';o.innerHTML=`<div class="history-modal"><div class="history-header"><div><strong>${esc(c.name)}</strong><div class="clip-meta">${versions.length} previous versions</div></div><button class="history-close">×</button></div><div class="history-current"><strong>Current</strong> · ${fmt(c.updatedAt||c.createdAt)}<div class="history-preview">${c.type==='image'?'[Image]':esc(preview(c.content))}</div></div>${versions.map((v,i)=>`<div class="history-item"><div><strong>Version ${versions.length-i}</strong> · ${fmt(v.savedAt)} · ${esc(v.type)}<div class="history-preview">${v.type==='image'?'[Image]':esc(preview(v.content))}</div><div class="history-diff">${esc(diffSummary(v.type,v.content,c.type,c.content))}</div></div><button class="btn-secondary" data-restore="${v.id}">Restore</button></div>`).join('')||'<div class="empty-state">No previous versions.</div>'}</div>`;document.body.appendChild(o);o.querySelector('.history-close').onclick=()=>o.remove();o.onclick=e=>{if(e.target===o)o.remove()};o.querySelectorAll('[data-restore]').forEach(b=>b.onclick=()=>{if(c.locked){notify('Unlock clip before restoring');return;}const v=c.versions.find(x=>x.id===b.dataset.restore);if(v&&restoreVersion(c,v)){o.remove();renderClipsList();notify('Version restored')}}); }
+function openHistory(c){ document.getElementById('clip-history-overlay')?.remove(); const versions=[...ensureVersions(c)].sort((a,b)=>b.savedAt-a.savedAt); const o=document.createElement('div');o.id='clip-history-overlay';o.className='history-overlay';o.innerHTML=`<div class="history-modal"><div class="history-header"><div><strong>${esc(c.name)}</strong><div class="clip-meta">${versions.length} previous versions</div></div><button class="history-close">×</button></div><div class="history-current"><strong>Current</strong> · ${fmt(c.updatedAt||c.createdAt)}<div class="history-preview">${c.type==='image'?'[Image]':esc(preview(c.content))}</div></div>${versions.map((v,i)=>`<div class="history-item"><div><strong>Version ${versions.length-i}</strong> · ${fmt(v.savedAt)} · ${esc(v.type)}<div class="history-preview">${v.type==='image'?'[Image]':esc(preview(v.content))}</div><div class="history-diff">${esc(diffSummary(v.type,v.content,c.type,c.content))}</div></div><button class="btn-secondary" data-restore="${esc(v.id)}">Restore</button></div>`).join('')||'<div class="empty-state">No previous versions.</div>'}</div>`;document.body.appendChild(o);o.querySelector('.history-close').onclick=()=>o.remove();o.onclick=e=>{if(e.target===o)o.remove()};o.querySelectorAll('[data-restore]').forEach(b=>b.onclick=()=>{if(c.locked){notify('Unlock clip before restoring');return;}const v=c.versions.find(x=>x.id===b.dataset.restore);if(v&&restoreVersion(c,v)){o.remove();renderClipsList();notify('Version restored')}}); }
 
 const EXTRA_APPEARANCE={
   'dock-shadow-softness':['dockShadowSoftness','px'],'dock-shadow-direction':['dockShadowDirection','°'],'dock-shadow-distance':['dockShadowDistance','px'],
@@ -341,6 +355,12 @@ function attachListeners(){
   document.getElementById('preset-update').onclick=()=>persistPreset('update');
   document.getElementById('preset-delete').onclick=()=>persistPreset('delete');
   document.getElementById('quick-find-btn').onclick=openQuickFind;
+  document.getElementById('retry-clips-btn').onclick=()=>clipStore.flush();
+  document.querySelectorAll('[data-filter]').forEach(button=>button.onclick=()=>{
+    state.filter=button.dataset.filter;
+    document.querySelectorAll('[data-filter]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));
+    document.getElementById('clips-list').scrollTop=0;renderClipsList();
+  });
   document.addEventListener('keydown',e=>{if(e.altKey&&!e.ctrlKey&&!e.metaKey&&e.code==='KeyK'){e.preventDefault();openQuickFind()}});
   for (const [id,key] of Object.entries(PAGE_FIELDS)) {
     bindSetting(id,key,id.endsWith('enabled') ? 'checked' : 'value',updatePageAppearance);
@@ -402,20 +422,33 @@ async function useCurrentAsDefault(){try{const g=await messageWeavy({action:'get
 function messageWeavy(message){return new Promise((resolve,reject)=>chrome.tabs.query({url:'*://app.weavy.ai/*',currentWindow:true},tabs=>{const tab=tabs.find(t=>t.active)||tabs[0];if(!tab){reject(new Error('No Weavy tab'));return;}chrome.tabs.sendMessage(tab.id,message,r=>{if(chrome.runtime.lastError||!r){reject(new Error(chrome.runtime.lastError?.message||'No response'));return;}resolve(r)})}))}
 
 
-function handleImport(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!Array.isArray(d.clips))throw new Error('Invalid backup');const ids=new Set(state.clips.map(c=>c.id));const incoming=d.clips.filter(c=>!ids.has(c.id));let n=state.clips.length;incoming.forEach(c=>{c.sortOrder=n++;if(!Array.isArray(c.versions))c.versions=[]});state.clips.push(...incoming);if(d.settings)state.settings=normalizeSettings(d.settings);if(d.appearancePresets)chrome.runtime.sendMessage({action:'presetMutation',operation:'import',presets:d.appearancePresets}).then(r=>{if(!r?.success)notify('Preset import failed: '+(r?.error||'Unknown error'))}).catch(()=>notify('Preset import failed'));normalizeClips();saveClips(true);saveSettings();renderUI();notify(`Imported ${incoming.length} clips`)}catch(err){alert('Import failed: '+err.message)}};r.readAsText(f);e.target.value='';}
+async function handleImport(e){
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  if(f.size>64*1024*1024){alert('Import failed: backups must be 64 MB or smaller');return;}
+  try{
+    const d=WeavyClips.validateBackup(JSON.parse(await f.text()));
+    const ids=new Set(state.clips.map(c=>c.id)),incoming=d.clips.filter(c=>!ids.has(c.id));
+    let n=state.clips.length;incoming.forEach(c=>c.sortOrder=n++);
+    state.clips.push(...incoming);normalizeClips();
+    if(!await saveClips(true))throw Error('Clips could not be saved. Use Retry clip save.');
+    if(d.settings){const known=Object.fromEntries(Object.keys(DEFAULT_SETTINGS).filter(k=>Object.hasOwn(d.settings,k)).map(k=>[k,d.settings[k]]));state.settings=normalizeSettings({...state.settings,...known,settingsSchemaVersion:8});saveSettings();}
+    if(d.appearancePresets){const result=await chrome.runtime.sendMessage({action:'presetMutation',operation:'import',presets:d.appearancePresets});if(!result?.success)throw Error('Clips imported, but presets could not be saved');}
+    renderUI();notify(`Imported ${incoming.length} clips · ${d.clips.length-incoming.length} already present`);
+  }catch(error){renderClipsList();alert('Import failed: '+error.message);}
+}
 function handleExport(){const blob=new Blob([JSON.stringify({schemaVersion:3,clips:state.clips,settings:state.settings,appearancePresets:customPresets,exportedAt:Date.now()},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`weavy-clips-v2-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);notify('Backup exported')}
 function handleClear(){if(!confirm('Delete ALL clips? Export a backup first if needed.'))return;if(state.settings.showDeleteConfirm&&!confirm('Really delete all clips?'))return;state.clips=[];saveClips(true);renderClipsList();notify('All clips cleared')}
 
 async function refreshDiagnostics(){const root=document.getElementById('diagnostics');if(!root)return;const versions=state.clips.reduce((n,c)=>n+(c.versions?.length||0),0),locked=state.clips.filter(c=>c.locked).length,pinned=state.clips.filter(c=>c.pinned).length;const bytes=await new Promise(r=>chrome.storage.local.getBytesInUse(null,n=>r(n||0)));let runtime=null;try{runtime=await messageWeavy({action:'getRuntimeDiagnostics'})}catch{}const capture=runtime?.capture;const captureText=capture?`${capture.ok?'OK':'Failed'} · ${capture.method}${capture.verified?' · verified':''}${capture.copyEventSeen?' · copy event':''}`:'No runtime capture yet';const nativeTypes=capture?.nativeTypes?.length?capture.nativeTypes.join(', '):'—';const data=[['Version',chrome.runtime.getManifest().version],['Clips',String(state.clips.length)],['Pinned',String(pinned)],['Locked',String(locked)],['Stored versions',String(versions)],['Storage',formatBytes(bytes)],['Save method',state.settings.captureSelectionMethod],['Last selection copy',captureText],['Native copy types',nativeTypes],['Paste method',state.settings.pasteMethod],['Dock default',`${state.settings.defaultDockHorizontalAnchor} ${state.settings.defaultDockHorizontalOffset}px / ${state.settings.defaultDockVerticalAnchor} ${state.settings.defaultDockVerticalOffset}px`],['Current Weavy path',runtime?.projectKey||'—'],['Schema',String(state.settings.settingsSchemaVersion)]];root.innerHTML=data.map(([k,v])=>`<div class="diag-row"><span>${esc(k)}</span><code>${esc(v)}</code></div>`).join('');}
 function formatBytes(n){if(n<1024)return n+' B';if(n<1048576)return (n/1024).toFixed(1)+' KB';return (n/1048576).toFixed(2)+' MB'}
 async function copyDiagnostics(){await refreshDiagnostics();const text=[...document.querySelectorAll('.diag-row')].map(r=>`${r.children[0].textContent}: ${r.children[1].textContent}`).join('\n');await navigator.clipboard.writeText(text);notify('Diagnostics copied')}
-function notify(message){document.querySelector('.toast')?.remove();const t=document.createElement('div');t.className='toast';t.textContent=message;document.body.appendChild(t);setTimeout(()=>t.remove(),2200)}
+function notify(message,undo){document.querySelector('.toast')?.remove();const t=document.createElement('div');t.className='toast';t.setAttribute('role','status');const text=document.createElement('span');text.textContent=message;t.appendChild(text);if(undo){const button=document.createElement('button');button.textContent='Undo';button.onclick=()=>{undo();t.remove()};t.appendChild(button)}document.body.appendChild(t);setTimeout(()=>t.remove(),undo?6000:2200)}
 function renderUI(){renderClipsList();renderSettings()}
-function init(){chrome.storage.local.get(['clips','settings','appearancePresets','collapsedSections'],r=>{state.clips=r.clips||[];customPresets=WeavyAppearance.sanitizePresets(r.appearancePresets);state.settings=normalizeSettings(r.settings||{});settingsSnapshot={...state.settings};document.querySelectorAll('[data-version]').forEach(el=>el.textContent='v'+chrome.runtime.getManifest().version);normalizeClips();renderUI();attachListeners();initNavigation(r.collapsedSections||{});updatePreviewAlignment()})}
+function init(){chrome.storage.local.get(['clips','clipsRevision','settings','appearancePresets','collapsedSections'],r=>{state.clips=r.clips||[];clipStore.reset(state.clips,r.clipsRevision);customPresets=WeavyAppearance.sanitizePresets(r.appearancePresets);state.settings=normalizeSettings(r.settings||{});settingsSnapshot={...state.settings};document.querySelectorAll('[data-version]').forEach(el=>el.textContent='v'+chrome.runtime.getManifest().version);normalizeClips();renderUI();attachListeners();initNavigation(r.collapsedSections||{});updatePreviewAlignment()})}
 chrome.storage.onChanged.addListener((ch,area)=>{
   if(area !== 'local') return;
   if(ch.appearancePresets){customPresets=WeavyAppearance.sanitizePresets(ch.appearancePresets.newValue);renderPresets()}
-  if(ch.clips){state.clips=ch.clips.newValue||[];normalizeClips();renderClipsList();refreshDiagnostics()}
+  if(ch.clips){clipStore.receive(ch.clips.newValue||[],ch.clipsRevision?.newValue);normalizeClips()}
   if(ch.settings){
     if (Number(ch.settings.newValue?._revision || 0) < acknowledgedRevision) return;
     const next = normalizeSettings(ch.settings.newValue||{});
@@ -428,6 +461,7 @@ chrome.storage.onChanged.addListener((ch,area)=>{
 });
 // Hand remaining edits to the worker when the settings tab closes.
 window.addEventListener('pagehide',()=>{
+  clipStore.flush();
   if (settingsJobs.length > 1) chrome.runtime.sendMessage({action:'patchSettings',patch:Object.assign({},...settingsJobs)}).catch(()=>{});
 });
 window.addEventListener('resize',updatePositionPreview);

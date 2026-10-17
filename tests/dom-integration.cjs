@@ -17,7 +17,7 @@ function makePage(html){
  const proto=window.HTMLElement.prototype;
  proto.getBoundingClientRect=function(){return {x:20,y:100,left:20,top:100,right:380,bottom:500,width:360,height:400}};
  Object.defineProperties(proto,{clientWidth:{get(){return 360},configurable:true},clientHeight:{get(){return 480},configurable:true},offsetWidth:{get(){return 360},configurable:true},offsetHeight:{get(){return 52},configurable:true}});
- proto.scrollIntoView=function(){};proto.setSelectionRange=function(){};proto.animate=function(){};
+ proto.select=function(){};proto.scrollIntoView=function(){};proto.setSelectionRange=function(){};proto.animate=function(){};
  Object.defineProperty(document,'activeElement',{get(){return document._active||document.body},configurable:true});proto.focus=function(){document._active=this};
  // Native select value setter is absent in this DOM library.
  const selProto=window.HTMLSelectElement.prototype;
@@ -27,7 +27,7 @@ function makePage(html){
  const chrome={storage,runtime:{id:'extension',getManifest:()=>JSON.parse(read('manifest.json')),onMessage:{addListener(){}},sendMessage(msg,cb){return new Promise(resolve=>{listener(clone(msg),{id:'extension',tab:{id:1,windowId:1}},result=>{cb?.(result);resolve(result)})})}},tabs:{query(_,cb){cb?.([]);return Promise.resolve([])}}};
  const context=vm.createContext({...basic,window,document,chrome,location:{origin:'https://app.weavy.ai',pathname:'/test'},innerWidth:1280,innerHeight:900,navigator:{clipboard:{writeText:async()=>{},write:async()=>{}}},confirm:()=>true,Blob,Event:window.Event,KeyboardEvent:window.Event});
  window.innerWidth=1280;window.innerHeight=900;
- for(const file of ['appearance.js','ui.js'])vm.runInContext(read(file),context);
+ for(const file of ['appearance.js','clips.js','ui.js'])vm.runInContext(read(file),context);
  return {context,document,window};
 }
 let passed=0;function check(test,label){assert.ok(test,label);passed++;console.log('PASS '+label)}
@@ -39,6 +39,23 @@ let passed=0;function check(test,label){assert.ok(test,label);passed++;console.l
  check(d.querySelectorAll('.section-body').length===9&&d.querySelectorAll('#settings-nav button').length===9,'all sections initialized with collapse + navigation');
  check(d.querySelectorAll('#clips-list .clip-item').length>0&&d.querySelectorAll('#clips-list .clip-item').length<20,'1,200 clips create fewer than 20 manager rows');
  check(d.querySelectorAll('#appearance-preset option').length===5,'built-in presets mounted');
+ d.querySelector('[data-filter="image"]').click();
+ check(d.getElementById('clips-count').textContent==='60 / 1200 clips','image filter searches the whole library');
+ d.querySelector('[data-filter="pinned"]').click();
+ check(d.getElementById('clips-count').textContent==='5 / 1200 clips','pinned filter shows the correct count');
+ d.querySelector('[data-filter="all"]').click();
+ const name=d.querySelector('[data-name-for]');const clipId=name.dataset.nameFor,oldName=name.textContent;name.click();
+ let rename=d.querySelector('#clips-list input.search-input');rename.value='Cancelled name';
+ const escKey=new options.window.Event('keydown');Object.defineProperty(escKey,'key',{value:'Escape'});rename.dispatchEvent(escKey);rename.dispatchEvent(new options.window.Event('blur'));
+ check(vm.runInContext(`state.clips.find(c=>c.id===${JSON.stringify(clipId)}).name`,options.context)===oldName,'Escape cancels a rename even when blur follows');
+ d.querySelector('[data-name-for]').click();rename=d.querySelector('#clips-list input.search-input');
+ vm.runInContext('renderClipsList()',options.context);
+ check(d.querySelector('#clips-list input.search-input')===rename,'background refresh preserves the active editor');
+ rename.dispatchEvent(escKey);
+ d.querySelector('[data-action="delete"]').click();await pause();
+ check(!store.clips.some(c=>c.id===clipId),'manager deletion reaches storage');
+ d.querySelector('.toast button').click();await pause();
+ check(store.clips.some(c=>c.id===clipId),'manager Undo restores the deleted clip');
  const appearance=d.querySelector('#appearance-section .section-toggle');appearance.click();check(d.querySelector('#appearance-section .section-body').hidden,'collapse hides body');appearance.click();check(!d.querySelector('#appearance-section .section-body').hidden,'collapse restores body');
  const emit=(id,value)=>{const el=d.getElementById(id);el.value=value;el.dispatchEvent(new options.window.Event('input',{bubbles:true}))};
  emit('preset-name','My theme');d.getElementById('preset-create').click();await pause();check(store.appearancePresets?.[0]?.name==='My theme','preset Create UI reaches worker');
@@ -47,10 +64,15 @@ let passed=0;function check(test,label){assert.ok(test,label);passed++;console.l
  emit('dock-opacity',95);await pause();d.getElementById('preset-apply').click();await pause();check(store.settings.dockOpacity===68,'Apply restores modified selected preset');
  chooser.value=store.appearancePresets[0].id;chooser.dispatchEvent(new options.window.Event('change'));await pause();d.getElementById('preset-delete').click();await pause();check(store.appearancePresets.length===0,'preset Delete UI removes custom preset');
  d.getElementById('quick-find-btn').click();check(!!d.querySelector('#wc-command-palette[open]'),'quick-search dialog opens');
- const query=d.getElementById('wc-command-query');query.value='Node 1199';query.dispatchEvent(new options.window.Event('input'));check(d.querySelectorAll('.wc-palette-results button').length===1,'palette searches clips beyond virtual window');d.querySelector('.wc-palette-head button').click();check(!d.getElementById('wc-command-palette'),'palette closes');
+ const query=d.getElementById('wc-command-query'),firstOption=d.querySelector('.wc-palette-results button');
+ const down=new options.window.Event('keydown',{bubbles:true});Object.defineProperty(down,'key',{value:'ArrowDown'});query.dispatchEvent(down);
+ check(d.querySelector('.wc-palette-results button')===firstOption&&query.getAttribute('aria-activedescendant')==='wc-command-option-1','arrow navigation preserves results and updates the accessible active option');
+ query.value='Node 1199';query.dispatchEvent(new options.window.Event('input'));check(d.querySelectorAll('.wc-palette-results button').length===1,'palette searches clips beyond virtual window');d.querySelector('.wc-palette-head button').click();check(!d.getElementById('wc-command-palette'),'palette closes');
  const site=makePage('<!doctype html><html><body><main tabindex="0"></main></body></html>');vm.runInContext(read('content.js'),site.context);await pause();
  const dock=site.document.getElementById('wc-dock');check(!!dock&&dock.querySelectorAll('[data-clip-id]').length===5,'content script mounts dock with pinned clips');
  check(dock.querySelector('#wc-save-btn .wc-glyph').textContent==='💾','save emoji restored');
+ const saveButton=dock.querySelector('#wc-save-btn');vm.runInContext('state.clips[0].usageCount=7;renderDock()',site.context);
+ check(dock.querySelector('#wc-save-btn')===saveButton,'usage statistics do not recreate dock buttons');
  site.document.getElementById('wc-settings-btn').click();await pause();check(panelOpen?.windowId===1,'dock gear opens native side panel in source window');
  site.document.getElementById('wc-library-btn').click();await pause();check(!!site.document.getElementById('wc-library-panel'),'Library opens');
  check(site.document.querySelectorAll('#wc-lib-list .wc-lib-item').length>0&&site.document.querySelectorAll('#wc-lib-list .wc-lib-item').length<20,'Library virtualizes 1,200 clips');

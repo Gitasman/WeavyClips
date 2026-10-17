@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Weavy Clips",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "description": "Clipboard and reusable clip manager for Weavy",
   "permissions": [
     "clipboardRead",
@@ -25,6 +25,7 @@
       ],
       "js": [
         "appearance.js",
+        "clips.js",
         "ui.js",
         "content.js"
       ],

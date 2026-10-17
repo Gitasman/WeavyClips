@@ -2,6 +2,20 @@
 (() => {
   const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   const escape = value => String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const searchCache=new WeakMap();
+  const fold=value=>String(value??'').normalize('NFKD').replace(/\p{M}/gu,'').toLowerCase();
+  function searchClips(items,query,limit=Infinity){
+    const words=fold(query).trim().split(/\s+/).filter(Boolean),matches=[];
+    for(const clip of items){
+      let entry=searchCache.get(clip);
+      const parts=[clip.name,clip.group,clip.type,clip.type==='image'?'':clip.content];
+      if(!entry||parts.some((part,i)=>part!==entry.parts[i])){
+        entry={parts,text:fold([parts[0],parts[1],parts[2],String(parts[3]??'').slice(0,2000)].join(' '))};searchCache.set(clip,entry);
+      }
+      if(words.every(word=>entry.text.includes(word))){matches.push(clip);if(matches.length>=limit)break;}
+    }
+    return matches;
+  }
   function virtualRange(total,scrollTop,viewport,rowHeight,overscan=3) {
     const top=Math.max(0,Math.min(scrollTop,Math.max(0,total*rowHeight-viewport)));
     const start=Math.max(0,Math.floor(top/rowHeight)-overscan);
@@ -27,7 +41,7 @@
     }
     set(items,{reset=false}={}) {this.items=items;if(reset)this.root.scrollTop=0;this.signature='';this.draw(true);}
     draw(force=false) {
-      if(!force && this.root.contains(document.activeElement) && document.activeElement.matches('input,textarea,select'))return;
+      if(this.root.contains(document.activeElement) && document.activeElement.matches('input,textarea,select'))return;
       if(this.root.querySelector('.wc-dragging'))return;
       const height=typeof this.rowHeight==='function'?this.rowHeight():this.rowHeight;
       const {start,end,top}=virtualRange(this.items.length,this.root.scrollTop||0,this.root.clientHeight||480,height);
@@ -52,20 +66,21 @@
     document.getElementById('wc-command-palette')?.remove();
     const previous=document.activeElement;
     const dialog=document.createElement('dialog');dialog.id='wc-command-palette';dialog.setAttribute('aria-label','Quick clip search');
-    dialog.innerHTML='<div class="wc-palette-head"><input id="wc-command-query" type="search" autocomplete="off" aria-label="Search clips" placeholder="Search clips…"><button type="button" aria-label="Close search">×</button></div><div class="wc-palette-results" role="listbox" aria-label="Matching clips"></div><div class="wc-palette-help">↑ ↓ choose · Enter use · Esc close</div>';
+    dialog.innerHTML='<div class="wc-palette-head"><input id="wc-command-query" type="search" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="wc-command-results" aria-label="Search clips" placeholder="Search clips…"><button type="button" aria-label="Close search">×</button></div><div id="wc-command-results" class="wc-palette-results" role="listbox" aria-label="Matching clips"></div><div class="wc-palette-help">↑ ↓ choose · Enter use · Esc close</div>';
     document.body.appendChild(dialog);const input=dialog.querySelector('input'),results=dialog.querySelector('.wc-palette-results');
     let matches=[],selected=0;
     function close(){dialog.close();dialog.remove();previous?.focus({preventScroll:true});}
     function choose(index){const item=matches[index];if(!item)return;close();onChoose(item);}
-    function render(){const q=input.value.trim().toLowerCase();matches=clips().filter(c=>[c.name,c.group,c.type,c.type==='image'?'':String(c.content).slice(0,300)].join(' ').toLowerCase().includes(q)).slice(0,60);selected=Math.min(selected,Math.max(0,matches.length-1));
-      results.innerHTML=matches.map((c,i)=>`<button type="button" role="option" aria-selected="${i===selected}" data-index="${i}"><span class="wc-glyph">${escape(c.icon||'📦')}</span><span>${escape(c.name)}<small>${escape(c.group||c.type)}</small></span></button>`).join('')||'<p>No matching clips.</p>';
+    function select(){results.querySelectorAll('[role="option"]').forEach((el,i)=>el.setAttribute('aria-selected',String(i===selected)));const active=results.querySelector('[aria-selected="true"]');if(active){input.setAttribute('aria-activedescendant',active.id);active.scrollIntoView({block:'nearest'});}else input.removeAttribute('aria-activedescendant');}
+    function render(){matches=searchClips(clips(),input.value,60);selected=Math.min(selected,Math.max(0,matches.length-1));
+      results.innerHTML=matches.map((c,i)=>`<button type="button" tabindex="-1" id="wc-command-option-${i}" role="option" aria-selected="${i===selected}" data-index="${i}"><span class="wc-glyph">${escape(c.icon||'📦')}</span><span>${escape(c.name)}<small>${escape(c.group||c.type)}</small></span></button>`).join('')||'<p>No matching clips.</p>';
       results.querySelectorAll('button').forEach(b=>b.onclick=()=>choose(Number(b.dataset.index)));
-      results.querySelector('[aria-selected="true"]')?.scrollIntoView({block:'nearest'});
+      select();
     }
     input.oninput=()=>{selected=0;render()};
-    dialog.addEventListener('keydown',e=>{if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();selected=Math.max(0,Math.min(matches.length-1,selected+(e.key==='ArrowDown'?1:-1)));render()}else if(e.key==='Enter'){e.preventDefault();choose(selected)}});
+    input.addEventListener('keydown',e=>{if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();selected=Math.max(0,Math.min(matches.length-1,selected+(e.key==='ArrowDown'?1:-1)));select()}else if(e.key==='Enter'){e.preventDefault();choose(selected)}});
     dialog.addEventListener('cancel',e=>{e.preventDefault();close()});dialog.querySelector('.wc-palette-head button').onclick=close;
     dialog.addEventListener('click',e=>{if(e.target===dialog)close()});dialog.showModal();render();input.focus();return dialog;
   }
-  globalThis.WeavyUI={VirtualList,virtualRange,lazyImages,positions,animatePositions,palette,escape};
+  globalThis.WeavyUI={VirtualList,virtualRange,lazyImages,positions,animatePositions,palette,escape,searchClips};
 })();

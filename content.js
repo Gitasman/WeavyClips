@@ -129,8 +129,9 @@ function getRotatingIcon(type, counters) {
 
 function init() {
   console.log('[WeavyClips] Initializing...');
-  chrome.storage.local.get(['clips', 'settings', 'dockPositions'], (result) => {
+  chrome.storage.local.get(['clips', 'clipsRevision', 'settings', 'dockPositions'], (result) => {
     state.clips = result.clips || [];
+    clipStore.reset(state.clips,result.clipsRevision);
     state.settings = normalizeSettings(result.settings || {});
     storedPosition = Object.fromEntries(POSITION_KEYS.map(k => [k,state.settings[k]]));
     if (state.settings.perProjectPosition) {
@@ -226,15 +227,13 @@ function formatDate(timestamp) {
   return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-let clipSaveTimer = null;
-function saveClips(immediate = false) {
-  clearTimeout(clipSaveTimer);
-  const persist = () => chrome.storage.local.set({ clips: state.clips }, () => {
-    if (chrome.runtime.lastError) console.error('[WeavyClips] Clip save failed:', chrome.runtime.lastError.message);
-  });
-  if (immediate) persist();
-  else clipSaveTimer = setTimeout(persist, 120);
-}
+let clipRenderFrame=0;
+function scheduleClipRender(){if(!clipRenderFrame)clipRenderFrame=requestAnimationFrame(()=>{clipRenderFrame=0;renderDock();if(state.libraryModal)refreshLibraryModal()});}
+const clipStore=new WeavyClips.Client({get:()=>state.clips,set:clips=>{state.clips=clips;scheduleClipRender()},status:status=>{
+  if(status==='error')showUndoToast('Clip save failed',()=>clipStore.flush(),'Retry');
+}});
+function saveClips(immediate=false){return clipStore.save(immediate);}
+window.addEventListener('pagehide',()=>clipStore.flush());
 
 function saveSettings() {
   // Position writes must not overwrite concurrent appearance edits.
@@ -688,17 +687,21 @@ function resetDockPosition() {
   showToast('↺ Dock moved to configured default');
 }
 
+let dockSignature='';
 function renderDock() {
   let dock=document.getElementById('wc-dock');
+  const pinnedClips=getOrderedClips(state.clips.filter(c=>c.pinned));
+  const signature=JSON.stringify(pinnedClips.map(c=>[c.id,c.name,c.icon,c.locked,c.group]));
+  if(dock&&signature===dockSignature)return;
+  dockSignature=signature;
   const previousPositions=WeavyUI.positions(dock,'.wc-clip-btn');
   if(!dock){dock=document.createElement('div');dock.id='wc-dock';document.body.appendChild(dock);}
-  const pinnedClips=getOrderedClips(state.clips.filter(c=>c.pinned));
   let lastGroup=null;
   const clipHtml=pinnedClips.map(clip=>{
     const group=clip.group||'';let divider='';
     if(lastGroup!==null && group!==lastGroup) divider=`<span class="wc-group-divider" title="${escapeHtml(group||'Ungrouped')}"></span>`;
     lastGroup=group;
-    return `${divider}<button class="wc-clip-btn ${clip.locked?'wc-locked':''}" draggable="true" data-clip-id="${clip.id}" title="${escapeHtml(clip.name)}${group?` · ${escapeHtml(group)}`:''}"><span class="wc-glyph">${escapeHtml(clip.icon||'📦')}</span></button>`;
+    return `${divider}<button class="wc-clip-btn ${clip.locked?'wc-locked':''}" draggable="true" data-clip-id="${escapeHtml(clip.id)}" title="${escapeHtml(clip.name)}${group?` · ${escapeHtml(group)}`:''}"><span class="wc-glyph">${escapeHtml(clip.icon||'📦')}</span></button>`;
   }).join('');
   dock.innerHTML=`<div id="wc-drag-handle">⠿</div><button id="wc-save-btn" data-wc-role="save" title="Save clipboard" aria-label="Save clipboard"><span class="wc-glyph">💾</span></button><button id="wc-settings-btn" title="Settings"><span class="wc-glyph">⚙️</span></button><button id="wc-library-btn" title="Library"><span class="wc-glyph">≡</span></button><div id="wc-clips-row">${clipHtml}</div>`;
   applyStyles();positionDock();attachDockListeners();
@@ -1114,7 +1117,7 @@ function openLibraryModal(focusClipId = null) {
   const renderList=()=>{
     const before=WeavyUI.positions(root,'.wc-lib-item');
     const query=state.librarySearch.trim().toLowerCase(),ordered=getOrderedClips();
-    const filtered=query?ordered.filter(clip=>[clip.name,clip.group,clip.type,clip.type==='image'?'':getClipPreview(clip.content)].join(' ').toLowerCase().includes(query)):ordered;
+    const filtered=WeavyUI.searchClips(ordered,query);
     panel.querySelector('#wc-library-count').textContent=`🗂 Library (${filtered.length}/${ordered.length})`;
     list.set(filtered);WeavyUI.animatePositions(root,before,'.wc-lib-item');
     if(focusClipId){const index=filtered.findIndex(c=>c.id===focusClipId);if(index>=0)list.scrollToIndex(index);focusClipId=null;}
@@ -1245,11 +1248,12 @@ function showClipHistory(clip) {
 }
 
 
-function showUndoToast(message, undo) {
+function showUndoToast(message, undo, label='Undo') {
   let toast=document.getElementById('wc-toast');
   if(!toast){toast=document.createElement('div');toast.id='wc-toast';document.body.appendChild(toast);}
   toast.style.cssText='position:fixed;z-index:9999999;background:#2a2a3a;color:#e8e8f0;border-radius:18px;padding:7px 9px 7px 14px;font:13px system-ui;box-shadow:0 4px 16px rgba(0,0,0,.4);display:flex;align-items:center;gap:10px;pointer-events:auto';
-  toast.innerHTML=`<span>${escapeHtml(message)}</span><button id="wc-undo-btn" style="border:0;border-radius:12px;background:var(--wc-accent,#faffc7);color:#202027;padding:5px 9px;cursor:pointer">Undo</button>`;
+  toast.setAttribute('role','status');
+  toast.innerHTML=`<span>${escapeHtml(message)}</span><button id="wc-undo-btn" style="border:0;border-radius:12px;background:var(--wc-accent,#fff);color:var(--wc-on-accent,#16161d);padding:5px 9px;cursor:pointer">${escapeHtml(label)}</button>`;
   const dock=document.getElementById('wc-dock');const r=dock?.getBoundingClientRect()||{left:innerWidth/2,width:0,top:innerHeight-40};toast.style.left=(r.left+r.width/2)+'px';toast.style.top=Math.max(8,r.top-46)+'px';toast.style.transform='translateX(-50%)';
   clearTimeout(toast._timer);toast.querySelector('#wc-undo-btn').onclick=()=>{clearTimeout(toast._timer);undo?.();toast.style.opacity='0'};toast._timer=setTimeout(()=>{toast.style.opacity='0'},4500);
 }
@@ -1279,10 +1283,8 @@ function receiveSettings(raw) {
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local') return;
   if (changes.clips) {
-    state.clips = changes.clips.newValue || [];
+    clipStore.receive(changes.clips.newValue||[],changes.clipsRevision?.newValue);
     normalizeClipOrder();
-    renderDock();
-    if (state.libraryModal) refreshLibraryModal();
   }
   if (changes.settings) {
     receiveSettings(changes.settings.newValue || {});

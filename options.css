@@ -79,3 +79,14 @@ body{padding-top:0}
 .settings-topbar #settings-nav button{color:var(--panel-fg,#fff);background:color-mix(in srgb,var(--panel-fg,#fff) 6%,transparent);border-color:color-mix(in srgb,var(--panel-fg,#fff) 12%,transparent)}
 .container>section{scroll-margin-top:var(--settings-topbar-offset,112px)}
 @media(max-width:480px){.settings-topbar{padding-inline:10px}}
+.compact-header{flex-wrap:wrap;gap:8px 12px}
+.compact-header>span:first-child{flex:1 1 auto}
+.help-link{font-size:12px;color:inherit;text-underline-offset:3px}
+.clips-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+.clip-filters{display:flex;flex-wrap:wrap;gap:5px}
+.clip-filters button{padding:6px 10px;border:1px solid color-mix(in srgb,var(--panel-fg) 16%,transparent);border-radius:8px;background:transparent;color:var(--panel-fg);font:inherit;font-size:12px;cursor:pointer}
+.clip-filters button[aria-pressed=true]{background:var(--ui-accent);border-color:var(--ui-accent);color:var(--ui-on-accent)}
+#clips-count{font-size:11px;color:var(--panel-muted);white-space:nowrap}
+#clips-save-status{font-size:11px;color:color-mix(in srgb,#e23445 70%,var(--panel-fg))}
+.toast{display:flex;align-items:center;gap:14px;max-width:calc(100vw - 32px)}
+.toast button{border:1px solid currentColor;border-radius:6px;background:transparent;color:inherit;padding:4px 8px;font:inherit;cursor:pointer}

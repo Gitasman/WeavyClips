@@ -1,6 +1,7 @@
 console.log('[WeavyClips] Background service worker started');
 
 importScripts('appearance.js');
+importScripts('clips.js');
 // Native side panel is the default UI; no extra tab/window on toolbar click.
 chrome.sidePanel.setPanelBehavior({openPanelOnActionClick:true}).catch(console.error);
 
@@ -172,6 +173,19 @@ async function applyDefaultDockToOpenWeavyTabs() {
 }
 
 let settingsWriteQueue = Promise.resolve();
+let clipsWriteQueue = Promise.resolve();
+function patchClips(operations) {
+  const write=clipsWriteQueue.then(async()=>{
+    if(!Array.isArray(operations)||operations.length>100000)throw new Error('Invalid clip operations');
+    const stored=await chrome.storage.local.get(['clips','clipsRevision']);
+    const clips=WeavyClips.apply(stored.clips||[],operations);
+    const revision=(Number(stored.clipsRevision)||0)+1;
+    await chrome.storage.local.set({clips,clipsRevision:revision});
+    return revision;
+  });
+  clipsWriteQueue=write.catch(()=>{});
+  return write;
+}
 function patchSettings(patch) {
   const write = settingsWriteQueue.then(async () => {
     const stored = await chrome.storage.local.get('settings');
@@ -214,6 +228,10 @@ function mutatePreset(message) {
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg.action === 'patchClips' && sender.id === chrome.runtime.id) {
+    patchClips(msg.operations).then(revision=>sendResponse({success:true,revision})).catch(error=>sendResponse({success:false,error:error.message}));
+    return true;
+  }
   if (msg.action === 'presetMutation' && sender.id === chrome.runtime.id) {
     mutatePreset(msg).then(result=>sendResponse({success:true,...result})).catch(error=>sendResponse({success:false,error:error.message}));
     return true;
