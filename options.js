@@ -143,11 +143,13 @@ let clipsView=null,clipsRenderFrame=0;
 function scheduleClipsRender(){if(!clipsRenderFrame)clipsRenderFrame=requestAnimationFrame(()=>{clipsRenderFrame=0;renderClipsList()});}
 function renderClipsList(){
   const root=document.getElementById('clips-list');
-  if(document.getElementById('clips-section').hidden)return;
-  if(!clipsView)clipsView=new WeavyUI.VirtualList(root,{rowHeight:()=>root.clientWidth<620?92:64,render:clipRowMarkup,bind:bindClipRows,empty:'No matching clips. Save a clip in Weavy to get started.'});
   const filtered=getFilteredClips();
-  clipsView.set(filtered);
+  // Reserve the final list height before lazy rendering so anchor targets stay put.
+  root.style.height=`min(400px,55vh,${Math.max(90,filtered.length*(root.clientWidth<620?92:64))}px)`;
   const count=document.getElementById('clips-count');if(count)count.textContent=`${filtered.length} / ${state.clips.length} clips`;
+  if(!visibleSettingsSections.has('clips-section'))return;
+  if(!clipsView)clipsView=new WeavyUI.VirtualList(root,{rowHeight:()=>root.clientWidth<620?92:64,render:clipRowMarkup,bind:bindClipRows,empty:'No matching clips. Save a clip in Weavy to get started.'});
+  clipsView.set(filtered);
 }
 function clipRowMarkup(c){return `<div class="clip-item ${c.locked?'locked':''}" draggable="true" data-clip-id="${esc(c.id)}">
     <button type="button" class="clip-icon-btn" data-icon-for="${esc(c.id)}" title="Change icon"><span class="wc-glyph">${esc(c.icon||'📦')}</span></button>
@@ -236,63 +238,102 @@ async function persistPreset(operation){
 }
 function openQuickFind(){WeavyUI.palette({clips:()=>getFilteredClipsForPalette(),onChoose:async clip=>{try{if(clip.type==='image'){const b=dataUrlToBlob(clip.content);await navigator.clipboard.write([new ClipboardItem({[b.type]:b})])}else await navigator.clipboard.writeText(String(clip.content));notify('Copied · paste into Weavy')}catch{notify('Could not copy clip')}}});}
 function getFilteredClipsForPalette(){return [...state.clips].sort((a,b)=>a.sortOrder-b.sortOrder);}
-let activeSettingsSection = '';
-function initNavigation(savedSection) {
+let currentSettingsSection = '';
+const sectionLinks = [];
+const visibleSettingsSections = new Set();
+function markCurrentSection(id) {
+  if (id === currentSettingsSection) return;
+  currentSettingsSection = id;
+  for (const {section,link} of sectionLinks) {
+    if (section.id === id) link.setAttribute('aria-current','location');
+    else link.removeAttribute('aria-current');
+  }
+  const link=sectionLinks.find(item=>item.section.id===id)?.link;
+  if(link){
+    // Scroll only the navigation strip; scrolling an anchor into view can cancel
+    // the page's ongoing smooth scroll or move the page unexpectedly.
+    const nav=link.parentElement,a=nav.getBoundingClientRect(),b=link.getBoundingClientRect();
+    if(b.left<a.left)nav.scrollLeft-=a.left-b.left;
+    else if(b.right>a.right)nav.scrollLeft+=b.right-a.right;
+  }
+}
+function refreshSection(id) {
+  if (id === 'clips-section') renderClipsList();
+  if (id === 'dock-position-section') {updatePositionPreview();refreshCurrentPosition();}
+  if (id === 'diagnostics-section') refreshDiagnostics();
+}
+function initNavigation() {
   const nav = document.getElementById('settings-nav');
   const sections = [...document.querySelectorAll('.container > section')];
-  const tabs = [];
-  nav.setAttribute('role','tablist');
-  const activate = (id, remember = true) => {
-    const section = sections.find(el => el.id === id) || sections[0];
-    if (!section) return;
-    activeSettingsSection = section.id;
-    sections.forEach(el => { el.hidden = el !== section; });
-    tabs.forEach(tab => {
-      const selected = tab.getAttribute('aria-controls') === section.id;
-      tab.setAttribute('aria-selected',String(selected));
-      tab.tabIndex = selected ? 0 : -1;
-    });
-    if (remember) {
-      chrome.storage.local.set({activeSettingsSection:section.id});
-      section.scrollIntoView({block:'start',behavior:'auto'});
-    }
-    refreshActiveSection();
-    updatePreviewAlignment();
+  const jump = section => {
+    markCurrentSection(section.id);
+    // Prepare deferred content before scrolling so the destination has its final size.
+    visibleSettingsSections.add(section.id);
+    refreshSection(section.id);
+    section.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
   };
   sections.forEach((section,index) => {
+    section.hidden = false;
     if (!section.id) section.id = 'settings-section-'+index;
     const heading = section.querySelector('h2');
     heading.id = section.id+'-title';
-    section.setAttribute('role','tabpanel');
-    section.setAttribute('aria-labelledby','settings-tab-'+index);
-    section.tabIndex = 0;
-    const tab = document.createElement('button');
-    tab.type = 'button';tab.id = 'settings-tab-'+index;
-    tab.textContent = heading.textContent;
-    tab.setAttribute('role','tab');tab.setAttribute('aria-controls',section.id);
-    tab.onclick = () => activate(section.id);
-    tab.onkeydown = e => {
+    section.setAttribute('aria-labelledby',heading.id);
+    const link = document.createElement('a');
+    link.id = 'settings-link-'+index;
+    link.href = '#'+section.id;
+    link.textContent = heading.textContent;
+    link.onclick = e => {e.preventDefault();jump(section);};
+    link.onkeydown = e => {
       let next;
       if (e.key === 'ArrowRight') next = (index+1)%sections.length;
       if (e.key === 'ArrowLeft') next = (index+sections.length-1)%sections.length;
       if (e.key === 'Home') next = 0;
       if (e.key === 'End') next = sections.length-1;
       if (next === undefined) return;
-      e.preventDefault();activate(sections[next].id);tabs[next].focus();
-      tabs[next].scrollIntoView({block:'nearest',inline:'nearest'});
+      e.preventDefault();sectionLinks[next].link.focus({preventScroll:true});jump(sections[next]);
     };
-    nav.appendChild(tab);tabs.push(tab);
+    nav.appendChild(link);sectionLinks.push({section,link});
   });
-  activate(savedSection,false);
+  markCurrentSection(sections[0]?.id);
+  if ('IntersectionObserver' in globalThis) {
+    const visibility = new IntersectionObserver(entries => {
+      for (const {target,isIntersecting} of entries) {
+        if (isIntersecting) {
+          const entered = !visibleSettingsSections.has(target.id);
+          visibleSettingsSections.add(target.id);
+          if (entered) refreshSection(target.id);
+        } else visibleSettingsSections.delete(target.id);
+      }
+      updatePreviewAlignment();
+    },{rootMargin:'200px 0px'});
+    sections.forEach(section=>visibility.observe(section));
+    window.addEventListener('pagehide',()=>visibility.disconnect(),{once:true});
+  } else {
+    sections.forEach(section=>visibleSettingsSections.add(section.id));
+    sections.forEach(section=>refreshSection(section.id));
+  }
   const observer = new ResizeObserver(() => {updateTopbarOffset();updatePreviewAlignment();updatePositionPreview()});
   observer.observe(document.querySelector('.container'));
   observer.observe(document.querySelector('.settings-topbar'));
+  window.addEventListener('pagehide',()=>observer.disconnect(),{once:true});
   updateTopbarOffset();
 }
-function refreshActiveSection() {
-  if (activeSettingsSection === 'clips-section') renderClipsList();
-  if (activeSettingsSection === 'dock-position-section') {updatePositionPreview();refreshCurrentPosition();}
-  if (activeSettingsSection === 'diagnostics-section') refreshDiagnostics();
+function updateSectionNavigation() {
+  if (!sectionLinks.length) return;
+  const top = document.querySelector('.settings-topbar').getBoundingClientRect().bottom+20;
+  let active = sectionLinks[0];
+  for (const item of sectionLinks) {
+    if (item.section.getBoundingClientRect().top <= top) active = item;
+    else break;
+  }
+  const height = document.documentElement.scrollHeight;
+  if (height > innerHeight && window.scrollY+innerHeight >= height-2) active = sectionLinks.at(-1);
+  markCurrentSection(active.section.id);
+}
+function refreshVisibleSections() {
+  for (const id of ['dock-position-section','diagnostics-section']) {
+    if (visibleSettingsSections.has(id)) refreshSection(id);
+  }
 }
 function updateTopbarOffset(){
   const bar=document.querySelector('.settings-topbar');
@@ -302,7 +343,7 @@ function updateTopbarOffset(){
 let previewFrame=0;
 function updatePreviewAlignment(){
   if(previewFrame)return;
-  previewFrame=requestAnimationFrame(()=>{previewFrame=0;const stage=document.querySelector('.preview-stage');if(!stage)return;const r=stage.getBoundingClientRect();stage.style.backgroundPosition=`${-r.left}px ${-r.top}px`;});
+  previewFrame=requestAnimationFrame(()=>{previewFrame=0;updateSectionNavigation();const stage=document.querySelector('.preview-stage');if(!stage)return;const r=stage.getBoundingClientRect();stage.style.backgroundPosition=`${-r.left}px ${-r.top}px`;});
 }
 window.addEventListener('scroll',updatePreviewAlignment,{passive:true});
 window.addEventListener('resize',updatePreviewAlignment);
@@ -321,7 +362,7 @@ function renderSettings(){
   set('default-dock-h-anchor',s.defaultDockHorizontalAnchor);set('default-dock-x',s.defaultDockHorizontalOffset);set('default-dock-v-anchor',s.defaultDockVerticalAnchor);set('default-dock-y',s.defaultDockVerticalOffset);
   set('dock-overflow-mode',s.dockOverflowMode);document.getElementById('dock-max-width').disabled=s.dockOverflowMode!=='scroll';set('dock-max-width',s.dockMaxWidth);check('clamp-dock',s.clampDock);check('snap-dock',s.snapDock);check('per-project-position',s.perProjectPosition);check('show-drag-guides',s.showDragGuides);
   renderExtraAppearance();renderPresets();
-  updateAppearancePreview();updatePageAppearance();updatePositionPreview();refreshActiveSection();
+  updateAppearancePreview();updatePageAppearance();updatePositionPreview();refreshVisibleSections();
 }
 const PAGE_FIELDS = {
   'settings-bg-color':'settingsBgColor', 'settings-panel-color':'settingsPanelColor',
@@ -463,12 +504,17 @@ async function applyBundledDefaults(){
 
 function handleClear(){if(!confirm('Delete ALL clips? Export a backup first if needed.'))return;if(state.settings.showDeleteConfirm&&!confirm('Really delete all clips?'))return;state.clips=[];saveClips(true);renderClipsList();notify('All clips cleared')}
 
-async function refreshDiagnostics(){const root=document.getElementById('diagnostics');if(!root)return;const versions=state.clips.reduce((n,c)=>n+(c.versions?.length||0),0),locked=state.clips.filter(c=>c.locked).length,pinned=state.clips.filter(c=>c.pinned).length;const bytes=await new Promise(r=>chrome.storage.local.getBytesInUse(null,n=>r(n||0)));let runtime=null;try{runtime=await messageWeavy({action:'getRuntimeDiagnostics'})}catch{}const capture=runtime?.capture;const captureText=capture?`${capture.ok?'OK':'Failed'} · ${capture.method}${capture.verified?' · verified':''}${capture.copyEventSeen?' · copy event':''}`:'No runtime capture yet';const nativeTypes=capture?.nativeTypes?.length?capture.nativeTypes.join(', '):'—';const data=[['Version',chrome.runtime.getManifest().version],['Clips',String(state.clips.length)],['Pinned',String(pinned)],['Locked',String(locked)],['Stored versions',String(versions)],['Storage',formatBytes(bytes)],['Save method',state.settings.captureSelectionMethod],['Last selection copy',captureText],['Native copy types',nativeTypes],['Paste method',state.settings.pasteMethod],['Dock default',`${state.settings.defaultDockHorizontalAnchor} ${state.settings.defaultDockHorizontalOffset}px / ${state.settings.defaultDockVerticalAnchor} ${state.settings.defaultDockVerticalOffset}px`],['Current Weavy path',runtime?.projectKey||'—'],['Schema',String(state.settings.settingsSchemaVersion)]];root.innerHTML=data.map(([k,v])=>`<div class="diag-row"><span>${esc(k)}</span><code>${esc(v)}</code></div>`).join('');}
+let diagnosticsInFlight=null;
+function refreshDiagnostics(){
+  if(!diagnosticsInFlight)diagnosticsInFlight=collectDiagnostics().finally(()=>{diagnosticsInFlight=null});
+  return diagnosticsInFlight;
+}
+async function collectDiagnostics(){const root=document.getElementById('diagnostics');if(!root)return;const versions=state.clips.reduce((n,c)=>n+(c.versions?.length||0),0),locked=state.clips.filter(c=>c.locked).length,pinned=state.clips.filter(c=>c.pinned).length;const bytes=await new Promise(r=>chrome.storage.local.getBytesInUse(null,n=>r(n||0)));let runtime=null;try{runtime=await messageWeavy({action:'getRuntimeDiagnostics'})}catch{}const capture=runtime?.capture;const captureText=capture?`${capture.ok?'OK':'Failed'} · ${capture.method}${capture.verified?' · verified':''}${capture.copyEventSeen?' · copy event':''}`:'No runtime capture yet';const nativeTypes=capture?.nativeTypes?.length?capture.nativeTypes.join(', '):'—';const data=[['Version',chrome.runtime.getManifest().version],['Clips',String(state.clips.length)],['Pinned',String(pinned)],['Locked',String(locked)],['Stored versions',String(versions)],['Storage',formatBytes(bytes)],['Save method',state.settings.captureSelectionMethod],['Last selection copy',captureText],['Native copy types',nativeTypes],['Paste method',state.settings.pasteMethod],['Dock default',`${state.settings.defaultDockHorizontalAnchor} ${state.settings.defaultDockHorizontalOffset}px / ${state.settings.defaultDockVerticalAnchor} ${state.settings.defaultDockVerticalOffset}px`],['Current Weavy path',runtime?.projectKey||'—'],['Schema',String(state.settings.settingsSchemaVersion)]];root.innerHTML=data.map(([k,v])=>`<div class="diag-row"><span>${esc(k)}</span><code>${esc(v)}</code></div>`).join('');}
 function formatBytes(n){if(n<1024)return n+' B';if(n<1048576)return (n/1024).toFixed(1)+' KB';return (n/1048576).toFixed(2)+' MB'}
 async function copyDiagnostics(){await refreshDiagnostics();const text=[...document.querySelectorAll('.diag-row')].map(r=>`${r.children[0].textContent}: ${r.children[1].textContent}`).join('\n');await navigator.clipboard.writeText(text);notify('Diagnostics copied')}
 function notify(message,undo){document.querySelector('.toast')?.remove();const t=document.createElement('div');t.className='toast';t.setAttribute('role','status');const text=document.createElement('span');text.textContent=message;t.appendChild(text);if(undo){const button=document.createElement('button');button.textContent='Undo';button.onclick=()=>{undo();t.remove()};t.appendChild(button)}document.body.appendChild(t);setTimeout(()=>t.remove(),undo?6000:2200)}
-function renderUI(){renderSettings()}
-async function init(){await chrome.runtime.sendMessage({action:'initializeDefaults'});chrome.storage.local.get(['clips','clipsRevision','settings','appearancePresets','activeSettingsSection'],r=>{state.clips=r.clips||[];clipStore.reset(state.clips,r.clipsRevision);customPresets=WeavyAppearance.sanitizePresets(r.appearancePresets);state.settings=normalizeSettings(r.settings||{});settingsSnapshot={...state.settings};document.querySelectorAll('[data-version]').forEach(el=>el.textContent='v'+chrome.runtime.getManifest().version);normalizeClips();renderUI();attachListeners();initNavigation(r.activeSettingsSection);updatePreviewAlignment()})}
+function renderUI(){renderSettings();renderClipsList()}
+async function init(){await chrome.runtime.sendMessage({action:'initializeDefaults'});chrome.storage.local.get(['clips','clipsRevision','settings','appearancePresets'],r=>{state.clips=r.clips||[];clipStore.reset(state.clips,r.clipsRevision);customPresets=WeavyAppearance.sanitizePresets(r.appearancePresets);state.settings=normalizeSettings(r.settings||{});settingsSnapshot={...state.settings};document.querySelectorAll('[data-version]').forEach(el=>el.textContent='v'+chrome.runtime.getManifest().version);normalizeClips();renderUI();attachListeners();initNavigation();updatePreviewAlignment()})}
 chrome.storage.onChanged.addListener((ch,area)=>{
   if(area !== 'local') return;
   if(ch.appearancePresets){customPresets=WeavyAppearance.sanitizePresets(ch.appearancePresets.newValue);renderPresets()}
@@ -488,5 +534,5 @@ window.addEventListener('pagehide',()=>{
   clipStore.flush();
   if (settingsJobs.length > 1) chrome.runtime.sendMessage({action:'patchSettings',patch:Object.assign({},...settingsJobs)}).catch(()=>{});
 });
-window.addEventListener('resize',updatePositionPreview);
+window.addEventListener('resize',()=>{updatePositionPreview();scheduleClipsRender()});
 init();

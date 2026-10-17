@@ -1,6 +1,6 @@
 {
   "name": "weavy-clips",
-  "version": "2.5.0",
+  "version": "2.5.1",
   "private": true,
   "description": "Test tooling only; Chrome loads the extension without a build step.",
   "scripts": {

@@ -2,7 +2,7 @@
 
 **English** · [Русский](README-RU.md)
 
-**v2.5.0 · Chrome 116+ · app.weavy.ai**
+**v2.5.1 · Chrome 116+ · app.weavy.ai**
 
 Save clipboard content and reusable Weavy clips, then paste them from a compact floating dock.
 
@@ -29,6 +29,13 @@ Keep the extracted folder after installation. **No Node.js, npm or build step is
 4. Click **Reload** for Weavy Clips in `chrome://extensions`, refresh **all** open Weavy tabs and reopen settings.
 
 Do not remove the extension or load a different folder: a different path can create a different extension ID and separate local storage. GitHub installations do not update automatically.
+
+## What changed in 2.5.1
+
+- Keep all nine settings sections on one scrollable page, with preset/history/restore controls expanded by default.
+- Make top navigation scroll to a section under the sticky header and highlight the current section during manual scrolling. Keyboard navigation and reduced-motion support remain available.
+- Tighten section spacing, fields, preset editing and backup cards; place position controls beside their preview on wider screens and use two-column method choices.
+- Defer offscreen list/diagnostics work, reserve the list height to prevent anchor jumps, combine scroll updates in one animation frame and reuse pending diagnostics requests.
 
 ## What changed in 2.5.0
 
@@ -110,7 +117,7 @@ Blur is visible only through a partly transparent background. At 100% opacity th
 
 **Default, Glass, Solid and Compact** presets include both dock and settings-page appearance. Choose a preset to apply it. **Apply** reapplies it after manual edits. **Save new**, **Update** and **Delete** manage personal presets; built-in presets are protected. Resets affect appearance only. Existing saved preferences are preserved through updates.
 
-The top header/navigation has an opaque sticky background. One section is shown at a time; the last section is remembered. Use Left/Right or Home/End in the tab bar to switch sections. Manage custom presets under **Manage my presets**; restore/clear actions are under **Restore defaults & clear data** in Backup. Optional dock auto-hide and Alt+1…9 quick paste are disabled by default. Animations respect reduced-motion preferences. Lists render a bounded window; list rows do not render or decode image previews. Clip payloads remain intact in storage and exports; the complete stored library is still loaded into memory.
+The top header/navigation has an opaque sticky background. All sections appear on one page; click a navigation link to scroll to it. The current section is highlighted as you scroll. Left/Right and Home/End also navigate between sections. Preset, history and restore controls are expanded by default and can be collapsed manually. Manage custom presets under **Manage my presets**; restore/clear actions are under **Restore defaults & clear data** in Backup. Optional dock auto-hide and Alt+1…9 quick paste are disabled by default. Animations respect reduced-motion preferences. Lists render a bounded window; list rows do not render or decode image previews. Clip payloads remain intact in storage and exports; the complete stored library is still loaded into memory.
 
 ## Backup, data and permissions
 
@@ -153,7 +160,7 @@ Or run the original logic checks without installing dependencies:
 node tests/regression.cjs
 ```
 
-The tests execute the real extension code with mocked Chrome transport and a LinkeDOM document. They cover appearance and glyph metric calculations, settings navigation, presets, virtual lists, filters, editing, concurrent clip writes, retry behavior, import validation, search and help language selection. They do not establish real Chrome/Weavy clipboard compatibility or pixel-level layout correctness.
+The tests execute the real extension code with mocked Chrome transport and a LinkeDOM document. They cover appearance and glyph metric calculations, scroll navigation, deferred section work, presets, virtual lists, filters, editing, concurrent clip writes, retry behavior, import validation, search and help language selection. They do not establish real Chrome/Weavy clipboard compatibility or pixel-level layout correctness.
 
 | Source | Responsibility |
 | --- | --- |

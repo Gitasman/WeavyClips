@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.5.1 — 2026-10-17
+
+- Restore one scrollable settings page with every section and auxiliary details block expanded by default.
+- Replace exclusive tabs with anchor navigation, current-section tracking and measured sticky-header offsets.
+- Compact control spacing, preset editing, backup actions, position layout and clipboard method choices.
+- Prepare section work near the viewport, reserve list height, coalesce scroll updates and deduplicate diagnostic requests.
+- Cover all-open navigation, deferred rendering, reserved geometry, keyboard and reduced-motion behavior.
+
 ## 2.5.0 — 2026-10-17
 
 - Rebuild settings as focused, keyboard-accessible workspaces with remembered active navigation.

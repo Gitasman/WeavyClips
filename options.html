@@ -17,9 +17,9 @@
 
 
 
-    <section id="backup-section"><h2>Backup</h2><p class="section-help">Export a copy, import a backup, or apply the defaults bundled with this build. Existing clips are kept.</p><div class="backup-actions"><div class="backup-action"><div><strong>Export backup</strong><small>Download clips, history and settings.</small></div><button id="export-btn" class="btn-secondary">📤 Export JSON</button></div><div class="backup-action"><div><strong>Import backup</strong><small>Merge a JSON backup with this library.</small></div><button id="import-btn" class="btn-secondary">📥 Import JSON</button></div></div><input type="file" id="import-file" accept=".json" hidden><div class="backup-secondary"><label class="field settings-open-field"><span>Open settings in</span><select id="settings-open-mode"><option value="tab">New tab (default)</option><option value="sidePanel">Chrome side panel</option></select></label></div><details class="danger-zone"><summary>Restore defaults &amp; clear data</summary><p>Applying defaults keeps existing clips. Clearing deletes all clips; export a backup first.</p><div class="button-row"><button id="apply-defaults-btn" class="btn-secondary">↺ Apply bundled defaults</button><button id="clear-btn" class="btn-danger">🗑️ Clear All Clips</button></div></details></section>
+    <section id="backup-section"><h2>Backup</h2><p class="section-help">Export a copy, import a backup, or apply the defaults bundled with this build. Existing clips are kept.</p><div class="backup-actions"><div class="backup-action"><div><strong>Export backup</strong><small>Download clips, history and settings.</small></div><button id="export-btn" class="btn-secondary">📤 Export JSON</button></div><div class="backup-action"><div><strong>Import backup</strong><small>Merge a JSON backup with this library.</small></div><button id="import-btn" class="btn-secondary">📥 Import JSON</button></div></div><input type="file" id="import-file" accept=".json" hidden><div class="backup-secondary"><label class="field settings-open-field"><span>Open settings in</span><select id="settings-open-mode"><option value="tab">New tab (default)</option><option value="sidePanel">Chrome side panel</option></select></label></div><details open class="danger-zone"><summary>Restore defaults &amp; clear data</summary><p>Applying defaults keeps existing clips. Clearing deletes all clips; export a backup first.</p><div class="button-row"><button id="apply-defaults-btn" class="btn-secondary">↺ Apply bundled defaults</button><button id="clear-btn" class="btn-danger">🗑️ Clear All Clips</button></div></details></section>
 
-    <section hidden id="appearance-section"><div class="section-head">
+    <section id="appearance-section"><div class="section-head">
         <h2>Appearance</h2>
         <button id="reset-appearance-btn" class="btn-ghost">↺ Reset appearance</button>
       </div><p class="section-help">Dock and button styling. Changes apply to open Weavy tabs automatically.</p><div class="preview-stage" aria-label="Live dock preview on the settings page background"><span class="preview-note">Your dock · updates instantly</span>
@@ -27,11 +27,11 @@
         <div id="dock-preview-box" class="dock-preview-box"><span aria-hidden="true">⠿</span><button data-wc-role="save" aria-label="Preview save"><span class="wc-glyph">💾</span></button><button aria-label="Preview settings"><span class="wc-glyph">⚙️</span></button><button aria-label="Preview library"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M5 6h14M5 12h14M5 18h14" /></svg></button><button aria-label="Preview clip"><span class="wc-glyph">📦</span></button><button aria-label="Preview clip"><span class="wc-glyph">⚡</span></button></div>
       </div><div class="preset-controls">
         <div class="preset-chooser"><label class="field"><span>Appearance preset</span><select id="appearance-preset" aria-label="Appearance preset"></select></label><button id="preset-apply" class="btn-secondary">Apply</button></div>
-        <details class="preset-details"><summary>Manage my presets</summary><div class="preset-editor"><input id="preset-name" maxlength="60" placeholder="Name your preset" aria-label="Preset name"><div class="button-row"><button id="preset-create" class="btn-secondary">＋ Save new</button><button id="preset-update" class="btn-secondary">Update</button><button id="preset-delete" class="btn-ghost">Delete</button></div></div></details>
+        <details open class="preset-details"><summary>Manage my presets</summary><div class="preset-editor"><input id="preset-name" maxlength="60" placeholder="Name your preset" aria-label="Preset name"><div class="button-row"><button id="preset-create" class="btn-secondary">＋ Save new</button><button id="preset-update" class="btn-secondary">Update</button><button id="preset-delete" class="btn-ghost">Delete</button></div></div></details>
         <small id="preset-status" role="status">Presets include dock and settings-page colors.</small>
       </div><div class="appearance-groups"><div class="control-group"><div class="group-heading"><h3>Shape &amp; color</h3><p>The dock and its buttons.</p></div><div class="settings-grid"><label class="field"><span>Accent color</span><div class="color-row"><input type="color" id="accent-color"><code id="accent-color-value"></code></div></label><label class="field"><span>Background color</span><div class="color-row"><input type="color" id="bg-color"><code id="bg-color-value"></code></div></label></div><div class="settings-grid three"><label class="field"><span>Corner radius</span><div class="range-row"><input type="range" id="border-radius" min="0" max="24" step="1"><code id="border-radius-value"></code></div></label><label class="field"><span>Dock button size</span><select id="dock-button-size"><option value="30">Small · 30 px</option><option value="36">Default · 36 px</option><option value="42">Large · 42 px</option></select></label><label class="field"><span>Accent usage</span><select id="accent-mode"><option value="minimal">Minimal</option><option value="normal">Normal</option><option value="strong">Strong</option></select></label></div></div><div class="control-group"><div class="group-heading"><h3>Transparency &amp; blur</h3><p>Reveal content behind the dock.</p></div><div class="settings-grid"><label class="field"><span>Background opacity</span><div class="range-row"><input type="range" id="dock-opacity" min="0" max="100" step="1"><code id="dock-opacity-value"></code></div></label><label class="field"><span>Backdrop blur</span><div class="range-row"><input type="range" id="dock-blur" min="0" max="24" step="1"><code id="dock-blur-value"></code></div></label></div><p class="appearance-help" id="blur-help">Blur softens content behind the dock. Lower background opacity to reveal it.</p></div><div class="control-group"><div class="group-heading"><h3>Shadow</h3><p>Strength, softness and direction.</p></div><div class="settings-grid"><label class="field"><span>Shadow strength</span><div class="range-row"><input type="range" id="dock-shadow" min="0" max="48" step="1"><code id="dock-shadow-value"></code></div></label><label class="field"><span>Shadow softness</span><div class="range-row"><input type="range" id="dock-shadow-softness" min="0" max="80" step="1"><code id="dock-shadow-softness-value"></code></div></label></div><div class="settings-grid"><label class="field"><span>Shadow direction</span><div class="range-row"><input type="range" id="dock-shadow-direction" min="0" max="360" step="1"><code id="dock-shadow-direction-value"></code></div><small>0° right · 90° down · 180° left · 270° up</small></label><label class="field"><span>Shadow distance</span><div class="range-row"><input type="range" id="dock-shadow-distance" min="0" max="40" step="0.25"><code id="dock-shadow-distance-value"></code></div></label></div></div><div class="control-group"><div class="group-heading"><h3>Outline</h3><p>Set thickness to zero to remove it.</p></div><div class="settings-grid three"><label class="field"><span>Outline thickness</span><div class="range-row"><input type="range" id="dock-border-width" min="0" max="6" step="0.5"><code id="dock-border-width-value"></code></div></label><label class="field"><span>Outline color</span><div class="color-row"><input type="color" id="dock-border-color"><code id="dock-border-color-value"></code></div></label><label class="field"><span>Outline opacity</span><div class="range-row"><input type="range" id="dock-border-opacity" min="0" max="100" step="1"><code id="dock-border-opacity-value"></code></div></label></div></div></div></section>
 
-    <section hidden id="settings-page-appearance">
+    <section id="settings-page-appearance">
       <div class="section-head"><h2>Settings Page</h2><button id="reset-page-appearance-btn" class="btn-ghost">↺ Reset page</button></div>
       <p class="section-help">Independent colors for this page. Your dock keeps its own appearance.</p>
       <div class="settings-grid three control-group">
@@ -46,14 +46,14 @@
       </div>
     </section>
 
-    <section hidden id="clips-section">
+    <section id="clips-section">
       <div class="section-head">
         <h2>Clips Manager</h2>
         <input aria-label="Search clips" id="clips-search" class="search-input" type="search" placeholder="Search clips…" autocomplete="off">
       </div>
       <p class="section-help">Click a name or icon to edit. Drag a row to reorder; pin clips to show them on the dock.</p><div class="clips-toolbar"><div id="clip-filters" class="clip-filters" aria-label="Filter clips"><button data-filter="all" aria-pressed="true">All</button><button data-filter="pinned" aria-pressed="false">Pinned</button><button data-filter="image" aria-pressed="false">Images</button><button data-filter="text" aria-pressed="false">Text</button><button data-filter="json" aria-pressed="false">JSON</button></div><span id="clips-count" role="status"></span></div>
       <div id="clips-list" class="clips-list"></div>
-    <details class="manager-policies"><summary>Save &amp; history preferences</summary><div class="settings-grid two top-gap">
+    <details open class="manager-policies"><summary>Save &amp; history preferences</summary><div class="settings-grid two top-gap">
         <label class="field"><span>Duplicate save behavior</span><select id="duplicate-behavior"><option value="warn">Warn and do not duplicate</option><option value="allow">Allow duplicates</option><option value="focus_existing">Open existing clip in Library</option></select></label>
         <label class="field"><span>Keep previous versions</span><select id="max-versions"><option value="10">10</option><option value="25">25</option><option value="50">50</option><option value="100">100</option><option value="0">Unlimited</option></select></label>
       </div><div class="setting-row manager-preference">
@@ -62,14 +62,14 @@
 
 
 
-    <section hidden id="dock-position-section">
+    <section id="dock-position-section">
       <h2>Dock Position</h2>
       <p class="section-help">Set the default dock location and reset any open Weavy tab to it, even when that tab is not active.</p>
       <div class="reset-dock-callout">
         <div><strong>Reset Dock Position</strong><small>Move the dock in all open Weavy tabs to the configured default position below.</small></div>
         <button id="apply-default-dock-btn" class="btn-primary">↺ Reset Dock Position</button>
       </div>
-      <div class="position-config-grid single">
+      <div class="position-workspace"><div class="position-config-grid single">
         <div class="position-card">
           <h3>Dock default</h3>
           <div class="settings-grid two">
@@ -81,10 +81,10 @@
           <small>For edge anchors, positive values are insets. With Center, +X moves right and +Y moves down.</small>
           <div class="nudge-row"><span>Nudge dock</span><div><button class="nudge-btn" data-target="dock" data-dir="left">←</button><button class="nudge-btn" data-target="dock" data-dir="up">↑</button><button class="nudge-btn" data-target="dock" data-dir="down">↓</button><button class="nudge-btn" data-target="dock" data-dir="right">→</button><select id="dock-nudge-step"><option value="1">1 px</option><option value="5" selected>5 px</option><option value="10">10 px</option><option value="25">25 px</option></select></div></div>
         </div>
-      </div>
-      <div class="position-preview-label">Position preview</div>
-      <div id="position-preview" class="position-preview"><div id="position-preview-dock" class="position-preview-dock">⠿ <span>💾</span><span>⚙️</span><span>≡</span><span>📦</span></div></div>
-      <div id="current-dock-position" class="section-help top-gap">Current dock: open Weavy to read position.</div>
+      </div><div class="position-overview"><div class="position-preview-label">Position preview</div><div id="position-preview" class="position-preview"><div id="position-preview-dock" class="position-preview-dock">⠿ <span>💾</span><span>⚙️</span><span>≡</span><span>📦</span></div></div><div id="current-dock-position" class="section-help top-gap">Current dock: open Weavy to read position.</div></div></div>
+      
+      
+      
       <div class="button-row top-gap"><button id="use-current-as-default-btn" class="btn-secondary">Use current dock as default</button><button id="factory-position-btn" class="btn-ghost">Factory values</button></div>
     </section>
 
@@ -92,7 +92,7 @@
 
 
 
-    <section hidden id="dock-behavior-section">
+    <section id="dock-behavior-section">
       <h2>Dock Behavior</h2>
       <div class="setting-row"><label class="toggle-label"><input type="checkbox" id="dock-auto-hide"><span class="toggle-slider"></span><span>Auto-hide dock when idle<small>Leaves a slim handle at the saved position. Hover or focus to reveal.</small></span></label></div>
       <div class="settings-grid two">
@@ -109,7 +109,7 @@
       </div>
     </section>
 
-    <section hidden id="site-settings-section">
+    <section id="site-settings-section">
       <h2>Site Settings</h2>
       <div class="radio-group">
         <label class="radio-label"><input type="radio" name="site-mode" value="weavy_only"><span class="radio-custom"></span><span><strong>Weavy only</strong><small>Recommended.</small></span></label>
@@ -117,7 +117,7 @@
       </div>
     </section>
 
-    <section hidden id="clipboard-section">
+    <section id="clipboard-section">
       <h2>Clipboard &amp; Paste</h2><p class="section-help">Choose how selections are saved and clips are pasted into Weavy.</p>
       
       <div class="setting-row">
@@ -152,7 +152,7 @@
       </div>
     </section>
 
-    <section hidden id="diagnostics-section">
+    <section id="diagnostics-section">
       <div class="section-head"><h2>Diagnostics</h2><button id="refresh-diagnostics-btn" class="btn-ghost">Refresh</button></div>
       <div id="diagnostics" class="diagnostics"></div>
       <div class="button-row top-gap"><button id="copy-diagnostics-btn" class="btn-secondary">Copy diagnostics</button></div>

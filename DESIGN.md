@@ -6,7 +6,7 @@ Use this guide to build companion Weavy extensions with the same appearance. It 
 
 A compact, neutral utility UI: quiet dark surfaces, restrained outlines, clear labels and short purposeful motion. Color identifies the primary action, selection and errors. Avoid decorative gradients, large branding, oversized cards and permanent payload previews.
 
-Use the system UI font, without downloads. Settings text is 13 px; labels and buttons are 12 px; supporting text is 11 px. Section headings are 18 px with a medium weight. Controls are 34 px high. Use a 4 px spacing base, 8–12 px gaps and 12–20 px panel padding. Outer panels have 12 px corners; controls generally have 7 px corners.
+Use the system UI font, without downloads. Settings text is 13 px; labels and buttons are 12 px; supporting text is 11 px. Section headings are 16 px with a medium weight. Controls are 32 px high. Use a 4 px spacing base, 8–10 px gaps and 10–14 px panel padding. Outer panels have 12 px corners; controls generally have 7 px corners.
 
 ## Two independent themes
 
@@ -39,8 +39,8 @@ Live preview uses the actual page background and the same dot phase, resembling 
 
 ## Settings layout and interaction
 
-A small name/version and tools sit above a horizontally scrollable tab bar. The entire top bar has an opaque panel background. Show one settings section at a time, highlight its tab and remember the destination. Support Left/Right, Home/End, visible keyboard focus and reduced motion. Backup comes first; Clipboard & Paste is penultimate.
+A small name/version and tools sit above horizontally scrollable section links. The entire top bar has an opaque panel background. Show every settings section on one page. Navigation scrolls below the measured header and highlights the current section during manual scrolling. Support Left/Right, Home/End, visible keyboard focus and reduced motion. Backup comes first; Clipboard & Paste is penultimate.
 
-Group related controls, keep helpers close to their controls, and disclose occasional actions such as preset editing or clearing data. On narrow screens, grids become a single column and clip actions move below the title. Lists show icon, name, updated date and actions; payloads remain available in storage and exports.
+Group related controls, keep helpers close to their controls, and keep auxiliary preset/history/restore blocks expanded by default, with optional manual collapse. On narrow screens, grids become a single column and clip actions move below the title. Lists show icon, name, updated date and actions; payloads remain available in storage and exports.
 
-Use brief 140–160 ms transitions for interaction or panel entry, with no blanket `transition: all`. Respect `prefers-reduced-motion`. Create list rows only for the visible window, defer inactive settings work and preserve active editors during storage updates. Autosave must show progress or failure and preserve retryable edits. Changes to design must preserve existing user settings and clip data.
+Use brief 140–160 ms transitions for interaction or panel entry, with no blanket `transition: all`. Respect `prefers-reduced-motion`. Create list rows only for the visible window, defer offscreen settings work, reserve list geometry to stabilize anchors and preserve active editors during storage updates. Autosave must show progress or failure and preserve retryable edits. Changes to design must preserve existing user settings and clip data.
