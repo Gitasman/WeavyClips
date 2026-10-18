@@ -4,7 +4,9 @@
 
 **v2.5.1 · Chrome 116+ · app.weavy.ai**
 
-Save clipboard content and reusable Weavy clips, then paste them from a compact floating dock.
+**Chrome extension for [Weavy](https://app.weavy.ai/).** Save text, images and JSON as reusable clips, then search and paste them from a compact floating dock.
+
+**Start here:** [Installation](#download-and-install) · [Everyday use](#everyday-use) · [Safe updates](#update-without-losing-your-clips) · [Data and permissions](#backup-data-and-permissions) · [Русский](README-RU.md)
 
 - Search your library with **Alt+K**, pin favorites, organize groups and keep clip history.
 - Customize the dock and settings page with independent colors, radii, opacity, blur, shadows and outlines.
@@ -29,60 +31,6 @@ Keep the extracted folder after installation. **No Node.js, npm or build step is
 4. Click **Reload** for Weavy Clips in `chrome://extensions`, refresh **all** open Weavy tabs and reopen settings.
 
 Do not remove the extension or load a different folder: a different path can create a different extension ID and separate local storage. GitHub installations do not update automatically.
-
-## What changed in 2.5.1
-
-- Keep all nine settings sections on one scrollable page, with preset/history/restore controls expanded by default.
-- Make top navigation scroll to a section under the sticky header and highlight the current section during manual scrolling. Keyboard navigation and reduced-motion support remain available.
-- Tighten section spacing, fields, preset editing and backup cards; place position controls beside their preview on wider screens and use two-column method choices.
-- Defer offscreen list/diagnostics work, reserve the list height to prevent anchor jumps, combine scroll updates in one animation frame and reuse pending diagnostics requests.
-
-## What changed in 2.5.0
-
-- Rebuild settings as nine focused workspaces with active tabs, keyboard navigation and a remembered destination. Backup stays first and Clipboard & Paste stays penultimate.
-- Group Appearance into Shape & color, Transparency & blur, Shadow and Outline. Keep the live preview visible near the controls, on the settings-page background.
-- Give Import and Export their own cards; place restore/clear operations in an expandable area. Move save/history preferences beside Clips Manager.
-- Use a geometric Library icon and center native emoji from the installed font’s painted bounds. Keep the colored Save emoji and use the same icon treatment in live preview.
-- Render manager rows and fetch diagnostics only when their section is opened. Remove duplicate dock button styling and replace the accumulated settings CSS with a shared theme and responsive control layout.
-
-## What changed in 2.4.1
-
-- Fix popup stacking: context menus and tooltips now appear above the dock and Library.
-- Replace the Library backup popover with separate, direct **Import** and **Export** header buttons.
-- Compact Library rows show only the clip icon, name, updated date and actions. Type badges, payload previews, thumbnails and usage/history counters are removed from the list.
-- Make Clips Manager similarly compact. Use the 🏷️ action to edit a group when needed.
-- Reduce settings spacing and control heights, and put section navigation on one horizontally scrollable line.
-- Keep virtual row heights aligned with the compact desktop/narrow layouts, skip empty image-observer work and reuse one date formatter per page.
-- Add regression checks for backup-button actions, group editing and popup layer ordering.
-
-## What changed in 2.4.0
-
-- **Backup comes first** in settings, with Import, Export and Apply bundled defaults.
-- **Settings open in a new tab by default.** Change Backup → Open settings in to use the native side panel. The dock gear and extension toolbar follow the preference.
-- **Library backup access.** The square ⇅ button beside Reset position and Close offers Export JSON and Import JSON using the same logic as settings.
-- **Minimal clip tooltips.** Only the name and one updated date, with wrapping and viewport clamping.
-- **Themed menus.** Context menus follow dock background, accent, foreground, radius, outline and shadow. Popup surfaces remain opaque for readability even when the dock itself is transparent.
-- **Focused context actions.** Copy, Update, Version history, Rename and Delete. Pin and Lock remain in Library and Clips Manager. Menus support keyboard navigation and Escape.
-- **Current factory appearance.** Transparent dock, 5 px blur, 85% shadow strength, 18 px softness and 6% outline opacity.
-
-### Bundled defaults and personal builds
-
-`default-backup.json` supplies settings and optional starter clips. Fresh installs apply it once; updates and intentionally empty existing libraries are preserved. **Apply bundled defaults** restores the bundled settings and adds missing starter IDs without replacing existing clips. Absolute saved screen coordinates are replaced by the configured relative dock anchor so the default works on different screens.
-
-The public repository includes the factory settings and an empty starter library. A personal build may include a private starter library and history. Do not commit personal backups or a populated starter file to the public repository.
-
-## What changed in 2.3.0
-
-- **Safer editing across tabs.** Clip changes go through a serialized service-worker queue. Additions and independent field edits are merged; a stale edit does not resurrect a deleted clip. Simultaneous edits to the same field use the last processed value.
-- **Smaller messages.** Renaming or pinning sends the changed fields rather than every image and history entry. The existing local storage format is retained; the stored library is still read and written as a whole.
-- **Less UI rebuilding.** Usage updates preserve dock buttons; background refreshes preserve the active editor. Arrow-key navigation in quick search updates selection without rebuilding the result list.
-- **Better search.** A shared cached index handles multiple words and diacritics. It covers names, groups, types and the first 2,000 characters of text/JSON content, and excludes image payloads.
-- **Library filters.** Switch between All, Pinned, Images, Text and JSON, with a matching/total count.
-- **Recovery.** Failed clip writes remain pending while the page stays open, with a Retry action. Deferred edits are handed to the worker on page exit. Deleting a clip in Clips Manager now offers Undo.
-- **Validated imports.** Reject unsupported backup versions, duplicate/unsafe IDs, invalid clip types and malformed history before adding clips. Import files are limited to 64 MB and 50,000 clips; imported settings are limited to known keys.
-- **English-first documentation**, with a Russian translation and a browser-aware offline help guide.
-
-See [CHANGELOG.md](CHANGELOG.md) for the release history.
 
 ## Everyday use
 
@@ -144,6 +92,60 @@ Share [this repository](https://github.com/Gitasman/WeavyClips) or the download 
 - **Pull requests:** proposed changes for review before merging.
 
 Do not attach private clips or backups to public issues. To publish a new version, update `manifest.json` and `package.json` together, update the lockfile/release notes, run the tests and check the affected flow in Chrome.
+
+## What changed in 2.5.1
+
+- Keep all nine settings sections on one scrollable page, with preset/history/restore controls expanded by default.
+- Make top navigation scroll to a section under the sticky header and highlight the current section during manual scrolling. Keyboard navigation and reduced-motion support remain available.
+- Tighten section spacing, fields, preset editing and backup cards; place position controls beside their preview on wider screens and use two-column method choices.
+- Defer offscreen list/diagnostics work, reserve the list height to prevent anchor jumps, combine scroll updates in one animation frame and reuse pending diagnostics requests.
+
+## What changed in 2.5.0
+
+- Rebuild settings as nine focused workspaces with active tabs, keyboard navigation and a remembered destination. Backup stays first and Clipboard & Paste stays penultimate.
+- Group Appearance into Shape & color, Transparency & blur, Shadow and Outline. Keep the live preview visible near the controls, on the settings-page background.
+- Give Import and Export their own cards; place restore/clear operations in an expandable area. Move save/history preferences beside Clips Manager.
+- Use a geometric Library icon and center native emoji from the installed font’s painted bounds. Keep the colored Save emoji and use the same icon treatment in live preview.
+- Render manager rows and fetch diagnostics only when their section is opened. Remove duplicate dock button styling and replace the accumulated settings CSS with a shared theme and responsive control layout.
+
+## What changed in 2.4.1
+
+- Fix popup stacking: context menus and tooltips now appear above the dock and Library.
+- Replace the Library backup popover with separate, direct **Import** and **Export** header buttons.
+- Compact Library rows show only the clip icon, name, updated date and actions. Type badges, payload previews, thumbnails and usage/history counters are removed from the list.
+- Make Clips Manager similarly compact. Use the 🏷️ action to edit a group when needed.
+- Reduce settings spacing and control heights, and put section navigation on one horizontally scrollable line.
+- Keep virtual row heights aligned with the compact desktop/narrow layouts, skip empty image-observer work and reuse one date formatter per page.
+- Add regression checks for backup-button actions, group editing and popup layer ordering.
+
+## What changed in 2.4.0
+
+- **Backup comes first** in settings, with Import, Export and Apply bundled defaults.
+- **Settings open in a new tab by default.** Change Backup → Open settings in to use the native side panel. The dock gear and extension toolbar follow the preference.
+- **Library backup access.** The square ⇅ button beside Reset position and Close offers Export JSON and Import JSON using the same logic as settings.
+- **Minimal clip tooltips.** Only the name and one updated date, with wrapping and viewport clamping.
+- **Themed menus.** Context menus follow dock background, accent, foreground, radius, outline and shadow. Popup surfaces remain opaque for readability even when the dock itself is transparent.
+- **Focused context actions.** Copy, Update, Version history, Rename and Delete. Pin and Lock remain in Library and Clips Manager. Menus support keyboard navigation and Escape.
+- **Current factory appearance.** Transparent dock, 5 px blur, 85% shadow strength, 18 px softness and 6% outline opacity.
+
+### Bundled defaults and personal builds
+
+`default-backup.json` supplies settings and optional starter clips. Fresh installs apply it once; updates and intentionally empty existing libraries are preserved. **Apply bundled defaults** restores the bundled settings and adds missing starter IDs without replacing existing clips. Absolute saved screen coordinates are replaced by the configured relative dock anchor so the default works on different screens.
+
+The public repository includes the factory settings and an empty starter library. A personal build may include a private starter library and history. Do not commit personal backups or a populated starter file to the public repository.
+
+## What changed in 2.3.0
+
+- **Safer editing across tabs.** Clip changes go through a serialized service-worker queue. Additions and independent field edits are merged; a stale edit does not resurrect a deleted clip. Simultaneous edits to the same field use the last processed value.
+- **Smaller messages.** Renaming or pinning sends the changed fields rather than every image and history entry. The existing local storage format is retained; the stored library is still read and written as a whole.
+- **Less UI rebuilding.** Usage updates preserve dock buttons; background refreshes preserve the active editor. Arrow-key navigation in quick search updates selection without rebuilding the result list.
+- **Better search.** A shared cached index handles multiple words and diacritics. It covers names, groups, types and the first 2,000 characters of text/JSON content, and excludes image payloads.
+- **Library filters.** Switch between All, Pinned, Images, Text and JSON, with a matching/total count.
+- **Recovery.** Failed clip writes remain pending while the page stays open, with a Retry action. Deferred edits are handed to the worker on page exit. Deleting a clip in Clips Manager now offers Undo.
+- **Validated imports.** Reject unsupported backup versions, duplicate/unsafe IDs, invalid clip types and malformed history before adding clips. Import files are limited to 64 MB and 50,000 clips; imported settings are limited to known keys.
+- **English-first documentation**, with a Russian translation and a browser-aware offline help guide.
+
+See [CHANGELOG.md](CHANGELOG.md) for the release history.
 
 ## Development and checks
 
